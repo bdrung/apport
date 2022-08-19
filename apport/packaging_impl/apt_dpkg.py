@@ -553,7 +553,12 @@ class __AptDpkgPackageInfo(PackageInfo):
         all_lists = []
         likely_lists = []
         for f in glob.glob("/var/lib/dpkg/info/*.list"):
-            p = os.path.splitext(os.path.basename(f))[0].lower().split(":")[0]
+            basename = os.path.splitext(os.path.basename(f))[0].lower()
+            if ":" in basename:
+                p, a = basename.split(":")
+            else:
+                p = basename
+                a = None
             if p in fname or fname in p:
                 likely_lists.append(f)
             else:
@@ -572,7 +577,14 @@ class __AptDpkgPackageInfo(PackageInfo):
                 match = self.__fgrep_files("%s" % file, all_lists)
 
         if match:
-            return os.path.splitext(os.path.basename(match))[0].split(":")[0]
+            basename = os.path.splitext(os.path.basename(match))[0]
+            if ":" in basename:
+                package, arch = basename.split(":")
+                if a != arch:
+                    package = basename
+            else:
+                package = basename
+            return package
 
         return None
 
