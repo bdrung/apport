@@ -329,8 +329,9 @@ class Report(problem_report.ProblemReport):
         Return determined package version (None for uninstalled).
         """
         try:
+            import traceback; traceback.print_stack()
             version = packaging.get_version(package)
-        except ValueError:
+        except ValueError as error:
             # package not installed
             version = None
         self["Package"] = "%s %s%s" % (

@@ -549,11 +549,13 @@ class __AptDpkgPackageInfo(PackageInfo):
                 return pkg
 
         fname = os.path.splitext(os.path.basename(file))[0].lower()
+        print(f"fname = {fname!r}")
 
         all_lists = []
         likely_lists = []
         for f in glob.glob("/var/lib/dpkg/info/*.list"):
             basename = os.path.splitext(os.path.basename(f))[0].lower()
+            #print(f"{f} -> {os.path.splitext(os.path.basename(f))[0]}")
             if ":" in basename:
                 p, a = basename.split(":")
             else:
@@ -563,6 +565,8 @@ class __AptDpkgPackageInfo(PackageInfo):
                 likely_lists.append(f)
             else:
                 all_lists.append(f)
+
+        print(f"*** likely_lists = {likely_lists!r}")
 
         # first check the likely packages
         match = self.__fgrep_files(file, likely_lists)
@@ -577,6 +581,7 @@ class __AptDpkgPackageInfo(PackageInfo):
                 match = self.__fgrep_files("%s" % file, all_lists)
 
         if match:
+            print(f"match = {match!r}")
             basename = os.path.splitext(os.path.basename(match))[0]
             if ":" in basename:
                 package, arch = basename.split(":")

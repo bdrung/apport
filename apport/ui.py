@@ -502,6 +502,7 @@ class UserInterface:
         self.report.add_package_info()
         path = self.report.get("ExecutablePath", "")
         self.cur_package = apport.fileutils.find_file_package(path)
+        print(f"*** apport.fileutils.find_file_package({path!r}) = {self.cur_package!r}")
         self.report.add_os_info()
         allowed_to_report = apport.fileutils.allowed_to_report()
         response = self.ui_present_report_details(
@@ -611,6 +612,7 @@ class UserInterface:
             self.cur_package = packaging.get_kernel_package()
         else:
             self.cur_package = self.args.package
+            print(f"*** cur_package / args.package = {self.cur_package!r}")
 
         try:
             self.collect_info(symptom_script)
@@ -706,6 +708,7 @@ class UserInterface:
 
         info_collected = False
         for p in pkgs:
+            print(f"*** pkgs = {pkgs!r}")
             # print(f"Collecting apport information for source package {p}...")
             self.cur_package = p
             self.report["SourcePackage"] = p
@@ -1152,6 +1155,7 @@ class UserInterface:
                 sys.exit(1)
             else:
                 pkg = packaging.get_file_package(issue)
+                print(f"pkg = packaging.get_file_package({issue!r}) = {pkg!r}")
                 if not pkg:
                     parser.error("%s does not belong to a package." % issue)
                     sys.exit(1)
@@ -1373,6 +1377,7 @@ class UserInterface:
         If a symptom script is given, this will be run first (used by
         run_symptom()).
         """
+        print(f"collect_info: self.cur_package = {self.cur_package!r}")
         self.report["_MarkForUpload"] = "True"
 
         # skip if we already ran (we might load a processed report)
@@ -1874,12 +1879,14 @@ class UserInterface:
             )
             return False
 
+        print(f"*** before cur_package = {self.cur_package!r}")
         if "Package" in self.report:
             self.cur_package = self.report["Package"].split()[0]
         else:
             self.cur_package = apport.fileutils.find_file_package(
                 self.report.get("ExecutablePath", "")
             )
+        print(f"*** after cur_package = {self.cur_package!r}")
 
         return True
 
