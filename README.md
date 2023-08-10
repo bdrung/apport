@@ -33,6 +33,8 @@ also need to be available.
 
 TODO: document the Python dependencies
 
+Test
+
 Temporarily enabling apport
 ===========================
 
