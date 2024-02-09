@@ -427,8 +427,8 @@ class T(unittest.TestCase):
                 temp.write(bin_data)
                 temp.flush()
 
-                with gzip.GzipFile("File1", "w", fileobj=tempgz) as gz:
-                    gz.write(bin_data)
+                with gzip.GzipFile("File1", "w", fileobj=tempgz) as compressor:
+                    compressor.write(bin_data)
                 tempgz.flush()
 
                 pr = problem_report.ProblemReport(date="now!")
@@ -538,4 +538,5 @@ class T(unittest.TestCase):
         with tempfile.TemporaryFile() as payload:
             payload.write(message.get_payload(decode=True))
             payload.seek(0)
-            return gzip.GzipFile(mode="rb", fileobj=payload).read()
+            with gzip.GzipFile(mode="rb", fileobj=payload) as decompressor:
+                decompressor.read()
