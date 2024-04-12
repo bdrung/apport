@@ -19,6 +19,7 @@
 import base64
 import datetime
 import glob
+import json
 import os
 import re
 import select
@@ -1083,6 +1084,22 @@ def attach_default_grub(report, key=None):
                 for line in f.readlines()
             ]
             report[key] = "".join(filtered)
+
+
+def attach_casper_md5check(report, location):
+    """Attach the results of the casper md5check of install media."""
+    result = "unknown"
+    mismatches = []
+    if os.path.exists(location):
+        attach_root_command_outputs(report, {"CasperMD5json": f"cat '{location}'"})
+        if "CasperMD5json" in report:
+            check = json.loads(report["CasperMD5json"])
+            result = check["result"]
+            mismatches = check["checksum_missmatch"]
+    report["CasperMD5CheckResult"] = result
+    if mismatches:
+        report["CasperMD5CheckMismatches"] = " ".join(mismatches)
+    report.pop("CasperMD5json", None)
 
 
 # backwards compatible API
