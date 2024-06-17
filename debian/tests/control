@@ -1,0 +1,41 @@
+Test-command: cp -r tests "$AUTOPKGTEST_TMP" && cd "$AUTOPKGTEST_TMP" && python3 -m pytest -ra -v tests/unit/ tests/integration/
+Depends:
+ apport,
+ apport-retrace,
+ apport-valgrind,
+ default-jdk-headless | java-sdk-headless,
+ dictionaries-common,
+ gcc,
+ iputils-ping,
+ kmod,
+ libc6-dev,
+ python3-psutil,
+ python3-pytest,
+ python3-systemd,
+ python3-zstandard,
+Restrictions: allow-stderr, needs-root
+Features: test-name=unit-and-integration-tests
+
+Tests: system-tests
+Depends:
+ apport,
+ apport-gtk,
+ apport-kde,
+ apport-retrace,
+ apport-valgrind,
+ chaos-marmosets,
+ dbus,
+ dbus-x11,
+ dirmngr,
+ gcc,
+ gnome-icon-theme,
+ gpg,
+ gvfs-daemons,
+ psmisc,
+ python3-dbus,
+ python3-pytest,
+ python3-systemd,
+ ubuntu-dbgsym-keyring,
+ ubuntu-keyring,
+ xvfb,
+Restrictions: allow-stderr, isolation-container, needs-root
