@@ -1,3 +1,9 @@
+apport (2.30.0-0ubuntu1) oracular; urgency=medium
+
+  * New upstream release.
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Tue, 23 Apr 2024 14:03:44 +0200
+
 apport (2.29.0-0ubuntu1) oracular; urgency=medium
 
   [ Benjamin Drung ]
