@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+# Exclude contents_direct.py because it is too slow.
+# sorted by creation speed for noble on desktop (but pickled put last)
+for db in sqlite_v1 sqlite_v2 sqlite_v3 sqlite_v3b \
+          sqlite_disqualified1 sqlite_disqualified2 sqlite_disqualified3 \
+          leveldb lmdb ndbm dbm pickle unoptimized_pickle; do
+    echo "$ ./contents_${db}.py $*"
+    "./contents_${db}.py" "$@" || echo "./contents_${db}.py failed with $?"
+    echo
+done
+
+# Check size:
+# du -s contents_cache/*noble-amd* | sort -n
