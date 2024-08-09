@@ -1,0 +1,14 @@
+/usr/bin/apport-bug /usr/bin/ubuntu-bug
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-firmware.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-meta-oem-osp1.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-meta-oem.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-meta-raspi.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-meta.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-oem-osp1.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-oem.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-signed-oem-osp1.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-signed-oem.py
+/usr/share/apport/package-hooks/source_linux.py /usr/share/apport/package-hooks/source_linux-signed.py
+/usr/share/bash-completion/completions/apport-bug /usr/share/bash-completion/completions/ubuntu-bug
+/usr/share/man/man1/apport-bug.1.gz /usr/share/man/man1/apport-collect.1.gz
+/usr/share/man/man1/apport-bug.1.gz /usr/share/man/man1/ubuntu-bug.1.gz
