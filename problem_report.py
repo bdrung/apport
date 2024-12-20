@@ -593,6 +593,7 @@ class ProblemReport(collections.UserDict):
 
     def _write_ascii_item(self, file: typing.IO[bytes], key: str) -> None:
         v = self.data[key]
+        assert isinstance(v, bytes | str | tuple)
 
         # if it's a tuple, we have a file reference; read the contents
         if not hasattr(v, "find"):
@@ -604,10 +605,10 @@ class ProblemReport(collections.UserDict):
             fail_on_empty = len(v) >= 4 and v[3]
 
             if hasattr(v[0], "read"):
-                v = v[0].read()  # file-like object
+                value = v[0].read()  # file-like object
             else:
                 with open(v[0], "rb") as f:  # file name
-                    v = f.read()
+                    value = f.read()
 
             if fail_on_empty and len(v) == 0:
                 raise OSError("did not get any data for field " + key)
@@ -615,19 +616,21 @@ class ProblemReport(collections.UserDict):
             if limit is not None and len(v) > limit:
                 del self.data[key]
                 return
+        else:
+            value = v
 
-        if isinstance(v, str):
+        if isinstance(value, str):
             # unicode → str
-            v = v.encode("UTF-8")
+            value = value.encode("UTF-8")
 
         file.write(key.encode("ASCII"))
-        if b"\n" in v:
+        if b"\n" in value:
             # multiline value
             file.write(b":\n ")
-            file.write(v.replace(b"\n", b"\n "))
+            file.write(value.replace(b"\n", b"\n "))
         else:
             file.write(b": ")
-            file.write(v)
+            file.write(value)
         file.write(b"\n")
 
     @staticmethod
