@@ -569,7 +569,7 @@ class ProblemReport(collections.UserDict):
             if only_new and k in self.old_keys:
                 continue
             v = self.data[k]
-            if hasattr(v, "find"):
+            if isinstance(v, bytes | str):
                 if self.is_binary(v):
                     binkeys.append(k)
                 else:
@@ -596,7 +596,7 @@ class ProblemReport(collections.UserDict):
         assert isinstance(v, bytes | str | tuple)
 
         # if it's a tuple, we have a file reference; read the contents
-        if not hasattr(v, "find"):
+        if not isinstance(v, bytes | str):
             if len(v) >= 3 and v[2] is not None:
                 limit = v[2]
             else:
@@ -680,7 +680,7 @@ class ProblemReport(collections.UserDict):
         size = 0
 
         # direct value
-        if hasattr(value, "find"):
+        if isinstance(value, bytes | str):
             size += len(value)
             crc = zlib.crc32(value, crc)
             outblock = bc.compress(value)
@@ -824,7 +824,7 @@ class ProblemReport(collections.UserDict):
 
             # if it's a tuple, we have a file reference; read the contents
             # and gzip it
-            elif not hasattr(v, "find"):
+            elif not isinstance(v, bytes | str):
                 attach_value = ""
                 if hasattr(v[0], "read"):
                     f = v[0]  # file-like object

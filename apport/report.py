@@ -1929,7 +1929,7 @@ class Report(problem_report.ProblemReport):
         command += ["--ex", f'file "{executable}"']
 
         if "CoreDump" in self:
-            if hasattr(self["CoreDump"], "find"):
+            if isinstance(self["CoreDump"], bytes | str):
                 (fd, core) = tempfile.mkstemp(prefix="apport_core_")
                 atexit.register(os.unlink, core)
                 os.write(fd, self["CoreDump"])
