@@ -29,6 +29,7 @@ import time
 import typing
 import zlib
 from collections.abc import Generator, Iterable, Iterator
+from typing import Literal
 
 # magic number (0x1F 0x8B) and compression method (0x08 for DEFLATE)
 GZIP_HEADER_START = b"\037\213\010"
@@ -319,9 +320,30 @@ class CompressedValue:
 
 
 type ProblemReportValue = bytes | CompressedFile | CompressedValue | str | tuple
+type _StringKey = (
+    Literal["Architecture"]
+    | Literal["Date"]
+    | Literal["ExecutablePath"]
+    | Literal["OopsText"]
+    | Literal["Package"]
+    | Literal["PackageArchitecture"]
+    | Literal["ProblemType"]
+    | Literal["ProcCmdline"]
+    | Literal["ProcCwd"]
+    | Literal["ProcMaps"]
+    | Literal["ProcStatus"]
+    | Literal["SignalName"]
+    | Literal["SourcePackage"]
+    | Literal["Stacktrace"]
+    | Literal["StacktraceTop"]
+    | Literal["Tags"]
+    | Literal["Traceback"]
+    | Literal["Uname"]
+)
+_Default = typing.TypeVar("_Default")
 
 
-class ProblemReport(collections.UserDict):
+class ProblemReport(collections.UserDict[str, ProblemReportValue]):
     """Class to store, load, and handle problem reports."""
 
     def __init__(self, problem_type: str = "Crash", date: str | None = None) -> None:
@@ -906,6 +928,24 @@ class ProblemReport(collections.UserDict):
         file.write(msg.as_string().encode("UTF-8"))
         file.write(b"\n")
 
+    @typing.overload
+    def get(self, key: _StringKey, default: _Default = None) -> str | _Default: ...
+
+    @typing.overload
+    def get(
+        self, key: str, default: _Default = None
+    ) -> ProblemReportValue | _Default: ...
+
+    @typing.overload
+    def __getitem__(self, key: _StringKey) -> str: ...
+
+    @typing.overload
+    def __getitem__(self, key: str) -> ProblemReportValue: ...
+
+    @typing.overload
+    def __setitem__(self, k: _StringKey, v: str) -> None: ...
+
+    @typing.overload
     def __setitem__(self, k: str, v: ProblemReportValue) -> None:
         assert hasattr(k, "isalnum")
         if not k.replace(".", "").replace("-", "").replace("_", "").isalnum():
