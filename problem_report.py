@@ -380,7 +380,7 @@ class ProblemReport(collections.UserDict):
 
             if base64_encoded:
                 if binary is False:
-                    self.data[key] = None
+                    del self.data[key]
                 elif binary == "compressed":
                     self.data[key] = CompressedValue(
                         name=key, compressed_value=b"".join(iterator)
