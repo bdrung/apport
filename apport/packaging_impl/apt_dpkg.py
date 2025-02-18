@@ -1358,33 +1358,15 @@ class __AptDpkgPackageInfo(PackageInfo):
 
         if verbose:
             print("Extracting downloaded debs...")
-        # False positive, see https://github.com/PyCQA/pylint/issues/7122
-        for i in fetcher.items:  # pylint: disable=not-an-iterable
-            if not i.destfile.endswith("deb"):
-                continue
-            out = subprocess.check_output(["dpkg-deb", "--show", i.destfile]).decode()
-            (p, v) = out.strip().split()
-            if (
-                not permanent_rootdir
-                or p not in pkg_versions
-                or os.path.getctime(i.destfile) > last_written
-            ):
-                # don't extract the same version of the package if it is
-                # already extracted
-                if pkg_versions.get(p) == v:
-                    pass
-                # don't extract the package if it is a different version than
-                # the one we want to extract from Launchpad
-                elif p in lp_cache and lp_cache[p] != v:
-                    pass
-                else:
-                    subprocess.check_call(["dpkg", "-x", i.destfile, rootdir])
-                    pkg_versions[p] = v
-            pkg_name = os.path.basename(i.destfile).split("_", 1)[0]
-            # because a package may exist multiple times in the fetcher it may
-            # have already been removed
-            if pkg_name in real_pkgs:
-                real_pkgs.remove(pkg_name)
+        self._extract_downloaded_debs(
+            rootdir,
+            permanent_rootdir,
+            fetcher,
+            last_written,
+            lp_cache,
+            pkg_versions,
+            real_pkgs,
+        )
 
         # update package list
         pkgs = list(pkg_versions.keys())
@@ -1458,6 +1440,45 @@ class __AptDpkgPackageInfo(PackageInfo):
             else:
                 logger.debug("Removing %s which is already the right version", p)
                 real_pkgs.remove(p)
+
+    @staticmethod
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def _extract_downloaded_debs(
+        rootdir: str,
+        permanent_rootdir: bool,
+        fetcher: apt.apt_pkg.Acquire,
+        last_written: float,
+        lp_cache: dict[str, str | None],
+        pkg_versions: dict[str, str],
+        real_pkgs: set[str],
+    ) -> None:
+        # False positive, see https://github.com/PyCQA/pylint/issues/7122
+        for i in fetcher.items:  # pylint: disable=not-an-iterable
+            if not i.destfile.endswith("deb"):
+                continue
+            out = subprocess.check_output(["dpkg-deb", "--show", i.destfile]).decode()
+            (p, v) = out.strip().split()
+            if (
+                not permanent_rootdir
+                or p not in pkg_versions
+                or os.path.getctime(i.destfile) > last_written
+            ):
+                # don't extract the same version of the package if it is
+                # already extracted
+                if pkg_versions.get(p) == v:
+                    pass
+                # don't extract the package if it is a different version than
+                # the one we want to extract from Launchpad
+                elif p in lp_cache and lp_cache[p] != v:
+                    pass
+                else:
+                    subprocess.check_call(["dpkg", "-x", i.destfile, rootdir])
+                    pkg_versions[p] = v
+            pkg_name = os.path.basename(i.destfile).split("_", 1)[0]
+            # because a package may exist multiple times in the fetcher it may
+            # have already been removed
+            if pkg_name in real_pkgs:
+                real_pkgs.remove(pkg_name)
 
     @staticmethod
     def _call_dpkg(args: list[str]) -> str:
