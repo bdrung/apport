@@ -1258,14 +1258,7 @@ class __AptDpkgPackageInfo(PackageInfo):
         )
 
         # update package list
-        pkgs = list(pkg_versions.keys())
-        pkgs.sort()
-        with open(pkg_list, "w", encoding="utf-8") as f:
-            for p in pkgs:
-                f.write(p)
-                f.write(" ")
-                f.write(pkg_versions[p])
-                f.write("\n")
+        self._write_package_version_dict(pkg_list, pkg_versions)
 
         if tmp_aptroot:
             shutil.rmtree(aptroot)
@@ -1300,6 +1293,19 @@ class __AptDpkgPackageInfo(PackageInfo):
                     (p, v) = line.split()
                     pkg_versions[p] = v
         return pkg_versions
+
+    @staticmethod
+    def _write_package_version_dict(
+        pkg_list_filename: str, pkg_versions: dict[str, str]
+    ) -> None:
+        pkgs = list(pkg_versions.keys())
+        pkgs.sort()
+        with open(pkg_list_filename, "w", encoding="utf-8") as f:
+            for p in pkgs:
+                f.write(p)
+                f.write(" ")
+                f.write(pkg_versions[p])
+                f.write("\n")
 
     def _collect_dependencies(
         self,
