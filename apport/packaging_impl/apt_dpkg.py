@@ -1090,15 +1090,7 @@ class __AptDpkgPackageInfo(PackageInfo):
 
         # read original package list
         pkg_list = os.path.join(rootdir, "packages.txt")
-        pkg_versions = {}
-        if os.path.exists(pkg_list):
-            with open(pkg_list, encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    (p, v) = line.split()
-                    pkg_versions[p] = v
+        pkg_versions = self._read_package_version_dict(pkg_list)
 
         # mark packages for installation
         real_pkgs = set()
@@ -1295,6 +1287,19 @@ class __AptDpkgPackageInfo(PackageInfo):
     #
     # Internal helper methods
     #
+
+    @staticmethod
+    def _read_package_version_dict(pkg_list_filename: str) -> dict[str, str]:
+        pkg_versions = {}
+        if os.path.exists(pkg_list_filename):
+            with open(pkg_list_filename, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    (p, v) = line.split()
+                    pkg_versions[p] = v
+        return pkg_versions
 
     def _collect_dependencies(
         self,
