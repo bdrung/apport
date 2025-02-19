@@ -1084,7 +1084,7 @@ class __AptDpkgPackageInfo(PackageInfo):
 
         archivedir = apt.apt_pkg.config.find_dir("Dir::Cache::archives")
 
-        obsolete = ""
+        obsolete: list[str] = []
 
         src_records = apt.apt_pkg.SourceRecords()
 
@@ -1114,7 +1114,7 @@ class __AptDpkgPackageInfo(PackageInfo):
                     cache_pkg = apt_cache[pkg]
                 except KeyError:
                     m = f"package {pkg.replace('%', '%%')} does not exist, ignoring"
-                    obsolete += f"{m}\n"
+                    obsolete.append(f"{m}\n")
                     apport.logging.warning("%s", m)
                     continue
                 for dep in cache_pkg.candidate.dependencies:
@@ -1163,7 +1163,7 @@ class __AptDpkgPackageInfo(PackageInfo):
                 cache_pkg = apt_cache[pkg]
             except KeyError:
                 m = f"package {pkg.replace('%', '%%')} does not exist, ignoring"
-                obsolete += f"{m}\n"
+                obsolete.append(f"{m}\n")
                 apport.logging.warning("%s", m)
                 continue
 
@@ -1173,7 +1173,7 @@ class __AptDpkgPackageInfo(PackageInfo):
                     cache_pkg.candidate = cache_pkg.versions[ver]
             except KeyError:
                 if not get_package_from_launchpad(pkg, ver):
-                    obsolete += (
+                    obsolete.append(
                         f"{pkg} version {ver} required,"
                         f" but {cache_pkg.candidate.version} is available\n"
                     )
@@ -1208,7 +1208,7 @@ class __AptDpkgPackageInfo(PackageInfo):
                         try:
                             dbg.candidate = dbg.versions[candidate.version]
                         except KeyError:
-                            obsolete += (
+                            obsolete.append(
                                 f"outdated -dbg package for {pkg}:"
                                 f" package version {ver}"
                                 f" -dbg version {dbg.candidate.version}\n"
@@ -1285,7 +1285,7 @@ class __AptDpkgPackageInfo(PackageInfo):
                                         candidate.version
                                     ]
                                 except KeyError:
-                                    obsolete += (
+                                    obsolete.append(
                                         f"outdated debug symbol package"
                                         f" for {pkg}: package version"
                                         f" {candidate.version}"
@@ -1298,7 +1298,9 @@ class __AptDpkgPackageInfo(PackageInfo):
                                 if get_package_from_launchpad(dbgsym_pkg, ver):
                                     pkg_found = True
                             if not pkg_found:
-                                obsolete += f"no debug symbol package found for {pkg}\n"
+                                obsolete.append(
+                                    f"no debug symbol package found for {pkg}\n"
+                                )
 
         self._unpack_packages(packages, pkg_versions, apt_cache, real_pkgs)
 
@@ -1345,7 +1347,7 @@ class __AptDpkgPackageInfo(PackageInfo):
         if permanent_rootdir:
             self._save_virtual_mapping(aptroot)
 
-        return obsolete
+        return "".join(obsolete)
 
     def package_name_glob(self, nameglob):
         """Return known package names which match given glob."""
