@@ -1,0 +1,4 @@
+Bug-Database: https://bugs.launchpad.net/apport
+Bug-Submit: https://bugs.launchpad.net/apport/+filebug
+Repository: https://github.com/canonical/apport.git
+Repository-Browse: https://github.com/canonical/apport
