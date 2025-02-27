@@ -1,3 +1,9 @@
+apport (2.33.0-0ubuntu1) plucky; urgency=medium
+
+  * New upstream release.
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Thu, 27 Feb 2025 16:46:36 +0100
+
 apport (2.32.0-0ubuntu2) plucky; urgency=medium
 
   * python3-apport: Bump python3-problem-report dependency to >= 2.28
