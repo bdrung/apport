@@ -411,7 +411,11 @@ class T(unittest.TestCase):  # pylint: disable=too-many-public-methods
         out = io.BytesIO()
         self.assertRaises(OSError, pr.write, out)
 
-    @patch("problem_report.CompressedValue.iter_compressed.__defaults__", (48,))
+    @patch(
+        "problem_report.ProblemReport._write_binary_item_compressed_and_encoded"
+        ".__defaults__",
+        (48,),
+    )
     def test_write_compressed_value(self) -> None:
         """Write a report with a multi-line compressed value."""
         report = problem_report.ProblemReport(date="now!")

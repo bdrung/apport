@@ -200,10 +200,10 @@ class CompressedFile:
         if hasattr(self, "_compressed_file"):
             self._compressed_file.close()
 
-    def iter_compressed(self) -> Iterator[bytes]:
+    def iter_compressed(self, chunk_size: int = CHUNK_SIZE) -> Iterator[bytes]:
         """Iterate over the compressed content of the file in chunks."""
         while True:
-            block = self._compressed_file.read(CHUNK_SIZE)
+            block = self._compressed_file.read(chunk_size)
             if not block:
                 break
             yield block
@@ -659,7 +659,9 @@ class ProblemReport(collections.UserDict):
             file.truncate(reset_position)
             raise
 
-    def _generate_compressed_chunks(self, key: str) -> Generator[bytes]:
+    def _generate_compressed_chunks(
+        self, key: str, chunk_size: int
+    ) -> Generator[bytes]:
         """Generator taking the value out of self.data and outputing it
         in compressed chunks of binary data.
 
@@ -670,7 +672,7 @@ class ProblemReport(collections.UserDict):
         # pylint: disable=too-many-branches
         value = self.data[key]
         if isinstance(value, (CompressedFile, CompressedValue)):
-            yield from value.iter_compressed()
+            yield from value.iter_compressed(chunk_size)
             return
         gzip_header = (
             GZIP_HEADER_START
@@ -704,7 +706,7 @@ class ProblemReport(collections.UserDict):
                 # hard to change, pylint: disable=consider-using-with
                 f = open(value[0], "rb")  # file name
             while True:
-                block = f.read(CHUNK_SIZE)
+                block = f.read(chunk_size)
                 size += len(block)
                 crc = zlib.crc32(block, crc)
                 if limit is not None:
@@ -736,12 +738,12 @@ class ProblemReport(collections.UserDict):
         yield block
 
     def _write_binary_item_compressed_and_encoded(
-        self, file: typing.IO[bytes], key: str
+        self, file: typing.IO[bytes], key: str, chunk_size: int = CHUNK_SIZE
     ) -> None:
         """Write the binary keys with gzip compression and base64 encoding"""
         try:
             self._write_binary_item_base64_encoded(
-                file, key, self._generate_compressed_chunks(key)
+                file, key, self._generate_compressed_chunks(key, chunk_size)
             )
         except _SizeLimitExceeded:
             # TODO: this should be logged out!
