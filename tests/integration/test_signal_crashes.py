@@ -18,6 +18,7 @@ import collections
 import contextlib
 import datetime
 import grp
+import io
 import os
 import pathlib
 import resource
@@ -939,7 +940,19 @@ class T(unittest.TestCase):
             process.exe().replace("/", "!"),
         ]
 
-    def _call_apport(
+    def _call_apport_directly(
+        self, process: psutil.Process, sig: int, dump_mode: int, stdin: typing.IO
+    ) -> None:
+        with (
+            unittest.mock.patch("sys.stdin", io.TextIOWrapper(stdin)),
+            unittest.mock.patch.object(
+                apport_binary, "get_apport_starttime", return_value=int(time.time())
+            ),
+            unittest.mock.patch.object(apport_binary, "init_error_log"),
+        ):
+            apport_binary.main(self._apport_args(process, sig, dump_mode))
+
+    def _call_apport_via_subprocess(
         self, process: psutil.Process, sig: int, dump_mode: int, stdin: typing.IO
     ) -> None:
         cmd = [str(APPORT_PATH)] + self._apport_args(process, sig, dump_mode)
@@ -1193,8 +1206,10 @@ class T(unittest.TestCase):
 
             if via_socket:
                 call_apport = self._call_apport_via_socket
+            elif uid is None:
+                call_apport = self._call_apport_directly
             else:
-                call_apport = self._call_apport
+                call_apport = self._call_apport_via_subprocess
             with open(gdb_core_file, "rb") as core_fd:
                 call_apport(command_process, sig, suid_dumpable, core_fd)
             os.unlink(gdb_core_file)
