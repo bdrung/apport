@@ -4,6 +4,7 @@
 # pylint: disable=invalid-name
 
 import email
+import email.message
 import gzip
 import io
 import os
