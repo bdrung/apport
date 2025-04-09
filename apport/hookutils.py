@@ -686,6 +686,7 @@ def pci_devices(*pci_classes):
 
     result = ""
     output = command_output(["lspci", "-vvmmnn"])
+    assert not isinstance(output, bytes)
     for paragraph in output.split("\n\n"):
         pci_class = None
         slot = None
@@ -863,6 +864,7 @@ def attach_printing(report):
     ppds = glob.glob("/etc/cups/ppd/*.ppd")
     if ppds:
         nicknames = command_output(["fgrep", "-H", "*NickName"] + ppds)
+        assert not isinstance(nicknames, bytes)
         report["PpdFiles"] = re.sub(
             r'/etc/cups/ppd/(.*).ppd:\*NickName: *"(.*)"', r"\g<1>: \g<2>", nicknames
         )
