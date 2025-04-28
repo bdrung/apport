@@ -139,6 +139,11 @@ class CrashDatabase(apport.crashdb.CrashDatabase):
             self.__lpcache = tempfile.mkdtemp(prefix="launchpadlib.cache.")
             atexit.register(shutil.rmtree, self.__lpcache, ignore_errors=True)
 
+    def _create_auth_dir(self):
+        auth_dir = os.path.dirname(self.auth)
+        if auth_dir and not os.path.isdir(auth_dir):
+            os.makedirs(auth_dir)
+
     @property
     def launchpad(self) -> Launchpad:
         """Return Launchpad instance."""
@@ -158,9 +163,7 @@ class CrashDatabase(apport.crashdb.CrashDatabase):
         else:
             launchpad_instance = DEFAULT_LAUNCHPAD_INSTANCE
 
-        auth_dir = os.path.dirname(self.auth)
-        if auth_dir and not os.path.isdir(auth_dir):
-            os.makedirs(auth_dir)
+        self._create_auth_dir()
 
         try:
             self.__launchpad = Launchpad.login_with(
