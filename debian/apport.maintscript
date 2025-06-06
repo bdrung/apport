@@ -1,0 +1,2 @@
+rm_conffile /etc/bash_completion.d/apport_completion 2.30.0-0ubuntu2~
+rm_conffile /etc/init.d/apport 2.30.0-0ubuntu2~

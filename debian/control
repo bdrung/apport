@@ -1,0 +1,239 @@
+Source: apport
+Section: utils
+Priority: optional
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-translations,
+ gdb,
+ gir1.2-glib-2.0 (>= 1.29.17),
+ pkgconf,
+ python3-all,
+ python3-gi,
+Build-Depends-Indep:
+ default-jdk-headless | java-sdk-headless,
+ dh-python,
+ gir1.2-gtk-3.0 (>= 3.1.90),
+ gir1.2-wnck-3.0,
+ gnu-coreutils,
+ intltool,
+ kmod,
+ libglib2.0-dev,
+ libxml2-utils,
+ mypy,
+ polkitd,
+ pylint,
+ python3-apt (>= 0.7.9),
+ python3-dbus,
+ python3-distutils-extra (>= 2.24~),
+ python3-launchpadlib,
+ python3-psutil,
+ python3-pyqt5,
+ python3-pytest,
+ python3-pytest-cov,
+ python3-rpm,
+ python3-systemd,
+ python3-typeshed,
+ python3-yaml,
+ python3-zstandard,
+ systemd-dev,
+ valgrind,
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Rules-Requires-Root: no
+Standards-Version: 4.7.2
+Vcs-Browser: https://code.launchpad.net/~ubuntu-core-dev/ubuntu/+source/apport/+git/apport
+Vcs-Git: https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/apport
+Homepage: https://wiki.ubuntu.com/Apport
+
+Package: apport
+Architecture: all
+Depends:
+ apport-core-dump-handler | python3-zstandard,
+ apport-core-dump-handler | systemd-coredump,
+ gir1.2-glib-2.0 (>= 1.29.17),
+ python3,
+ python3-apport (>= ${source:Version}),
+ python3-gi,
+ sensible-utils,
+ ${misc:Depends},
+Recommends: apport-symptoms, python3-systemd
+Suggests: apport-gtk | apport-kde, pkexec, polkitd
+Replaces: python-apport (<< 2.2-0ubuntu1)
+Breaks: python-apport (<< 2.2-0ubuntu1)
+Pre-Depends: ${misc:Pre-Depends}
+Description: automatically generate crash reports for debugging
+ apport automatically collects data from crashed processes and
+ compiles a problem report in /var/crash/. This utilizes the crashdump
+ helper hook provided by the Ubuntu kernel.
+ .
+ This package also provides a command line frontend for browsing and
+ handling the crash reports. For desktops, you should consider
+ installing the GTK+ or Qt user interface (apport-gtk or apport-kde).
+
+Package: python3-problem-report
+Section: python
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}
+Suggests: python3-zstandard
+Description: Python 3 library to handle problem reports
+ This Python library provides an interface for creating, modifying,
+ and accessing standardized problem reports for program and kernel
+ crashes and packaging bugs.
+ .
+ These problem reports use standard Debian control format syntax
+ (RFC822).
+
+Package: python3-apport
+Section: python
+Architecture: all
+Depends:
+ python3-apt (>= 0.7.9),
+ python3-httplib2,
+ python3-launchpadlib,
+ python3-problem-report (>= 2.28),
+ python3-yaml,
+ ${misc:Depends},
+ ${python3:Depends},
+Recommends: apport
+Breaks: apport (<< 2.23.1), apport-gtk (<< 2.23.1), apport-kde (<< 2.23.1)
+Description: Python 3 library for Apport crash report handling
+ This Python package provides high-level functions for creating and
+ handling apport crash reports:
+ .
+  * Query available and new reports.
+  * Add OS, packaging, and process runtime information to a report.
+  * Various frontend utility functions.
+  * Python hook to generate crash reports when Python scripts fail.
+
+Package: apport-core-dump-handler
+Architecture: all
+Depends: apport (>= 2.27.0-0ubuntu7~), ${misc:Depends}
+Breaks: apport (<< 2.27.0-0ubuntu7~)
+Replaces: apport (<< 2.27.0-0ubuntu7~), core-dump-handler
+Conflicts: core-dump-handler
+Provides: core-dump-handler
+Pre-Depends: ${misc:Pre-Depends}
+Description: Kernel core dump handler for Apport
+ apport automatically collects data from crashed processes and
+ compiles a problem report in /var/crash/. This utilizes the crashdump
+ helper hook provided by the Ubuntu kernel.
+ .
+ This package provides the service that configures the kernel (via
+ /proc/sys/kernel/core_pattern) to forward the crash dumps to apport.
+
+Package: apport-retrace
+Section: devel
+Architecture: all
+Depends:
+ apt,
+ binutils,
+ dpkg-dev,
+ gdb,
+ libc6-dbg | libc6-dbgsym | libc-dbg,
+ python3,
+ python3-apport (>= ${source:Version}),
+ python3-launchpadlib,
+ ${misc:Depends},
+Suggests: gdb-multiarch
+Description: tools for reprocessing Apport crash reports
+ apport-retrace recombines an Apport crash report (either a file or a
+ Launchpad bug) and debug symbol packages (.ddebs) into fully symbolic
+ stack traces. This can optionally use a sandbox for installing debug symbol
+ packages and doing the processing, so that entire process of retracing crashes
+ can happen with normal user privileges without changing the system.
+ .
+ You need to install gdb-multiarch if you want to be able to retrace crash
+ reports which happened on a different architecture than the one you run
+ apport-retrace on.
+
+Package: apport-valgrind
+Section: devel
+Architecture: all
+Depends:
+ apt,
+ binutils,
+ dpkg-dev,
+ libc6-dbg | libc6-dbgsym | libc-dbg,
+ python3,
+ python3-apport (>= ${source:Version}),
+ valgrind (>= 3.8.1-1ubuntu1~),
+ ${misc:Depends},
+Description: valgrind wrapper that first downloads debug symbols
+ apport-valgrind is a valgrind wrapper that automatically downloads related
+ available debug symbols and provides them to valgrind's memcheck tool, which
+ is executed. The output is a valgrind log file ("valgrind.log") that contains
+ stack traces (with as many symbols resolved as available) and that shows
+ memory leaks.
+
+Package: apport-gtk
+Section: gnome
+Architecture: all
+Depends:
+ apport (>= 0.41),
+ gir1.2-gtk-3.0 (>= 3.1.90),
+ gir1.2-wnck-3.0,
+ gnome-terminal | x-terminal-emulator,
+ procps,
+ python3,
+ python3-apport (>= ${source:Version}),
+ python3-gi,
+ whoopsie-preferences,
+ ${misc:Depends},
+Recommends: gdb | gdb-minimal, update-notifier
+Description: GTK+ frontend for the apport crash report system
+ apport automatically collects data from crashed processes and
+ compiles a problem report in /var/crash/. This utilizes the crashdump
+ helper hook provided by the Ubuntu kernel.
+ .
+ This package provides a GTK+ frontend for browsing and handling the
+ crash reports.
+
+Package: apport-kde
+Section: kde
+Architecture: all
+Depends:
+ apport (>= 0.41),
+ konsole | x-terminal-emulator,
+ procps,
+ python3,
+ python3-apport (>= ${source:Version}),
+ python3-pyqt5,
+ ${misc:Depends},
+Recommends: gdb-minimal | gdb, kubuntu-notification-helper | lxqt-notificationd
+Description: KDE frontend for the apport crash report system
+ apport automatically collects data from crashed processes and
+ compiles a problem report in /var/crash/. This utilizes the crashdump
+ helper hook provided by the Ubuntu kernel.
+ .
+ This package provides a KDE frontend for browsing and handling the
+ crash reports.
+
+Package: dh-apport
+Section: devel
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${perl:Depends}
+Description: debhelper extension for the apport crash report system
+ apport automatically collects data from crashed processes and
+ compiles a problem report in /var/crash/. This utilizes the crashdump
+ helper hook provided by the Ubuntu kernel.
+ .
+ This package provides a debhelper extension to make it easier for other
+ packages to include apport hooks.
+
+Package: apport-noui
+Architecture: all
+Depends:
+ apport (>= 2.20.10-0ubuntu4),
+ gdb-minimal | gdb,
+ procps,
+ python3,
+ python3-apport (>= ${source:Version}),
+ whoopsie (>= 0.2.77),
+ ${misc:Depends},
+Description: tools for automatically reporting Apport crash reports
+ apport automatically collects data from crashed processes and
+ compiles a problem report in /var/crash/. This utilizes the crashdump
+ helper hook provided by the Ubuntu kernel.
+ .
+ Installing this package will configure your system to automatically submit
+ all new Apport crash reports. Besides that it is an empty package.

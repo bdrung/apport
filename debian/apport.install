@@ -1,0 +1,46 @@
+../../java/testsuite/crash.class usr/share/apport/testsuite/
+../../java/testsuite/crash.jar usr/share/apport/testsuite/
+debian/apport-autoreport.path /usr/lib/systemd/system
+debian/apport-autoreport.service /usr/lib/systemd/system
+debian/apport-autoreport.timer /usr/lib/systemd/system
+debian/package-hooks usr/share/apport
+debian/tmp/etc/apport
+debian/tmp/etc/cron.daily
+debian/tmp/etc/default
+usr/bin/apport-bug
+usr/bin/apport-cli
+usr/bin/apport-collect
+usr/bin/apport-unpack
+usr/bin/oem-getlogs
+usr/lib/pm-utils
+usr/lib/systemd/system/apport-coredump-hook@.service
+usr/lib/systemd/system/apport-forward*
+usr/lib/systemd/system/systemd-coredump@.service.d
+usr/lib/tmpfiles.d/
+usr/lib/udev/
+usr/share/apport/apport
+usr/share/apport/apport-checkreports
+usr/share/apport/apportcheckresume
+usr/share/apport/dump_acpi_tables.py
+usr/share/apport/gcc_ice_hook
+usr/share/apport/general-hooks
+usr/share/apport/is-enabled
+usr/share/apport/iwlwifi_error_dump
+usr/share/apport/java_uncaught_exception
+usr/share/apport/kernel_crashdump
+usr/share/apport/kernel_oops
+usr/share/apport/package-hooks
+usr/share/apport/package_hook
+usr/share/apport/recoverable_problem
+usr/share/apport/root_info_wrapper
+usr/share/apport/unkillable_shutdown
+usr/share/apport/whoopsie-upload-all
+usr/share/bash-completion/completions
+usr/share/doc/apport
+usr/share/icons
+usr/share/java/apport.jar usr/share/apport/
+usr/share/locale
+usr/share/man/man1/apport-bug.1
+usr/share/man/man1/apport-cli.1
+usr/share/man/man1/apport-unpack.1
+usr/share/polkit-1

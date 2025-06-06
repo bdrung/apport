@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+# do not run in the source tree, as we want to check the system-installed
+# apport
+TESTDIR=${AUTOPKGTEST_TMP:-/tmp}
+mkdir -p "$TESTDIR"
+cp -r tests "$TESTDIR"
+cd "$TESTDIR"
+
+# clean up old crash reports
+rm -rf /var/crash/*
+
+export GNUPGHOME="$TESTDIR/gnupg"
+mkdir -m 700 "$GNUPGHOME"
+
+xvfb-run dbus-launch python3 -m pytest -ra -v tests/system/

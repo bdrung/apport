@@ -1,0 +1,3 @@
+Add-bin-oem-getlogs.patch
+Add-general-hooks.patch
+Default-to-Ubuntu-crash-DB.patch

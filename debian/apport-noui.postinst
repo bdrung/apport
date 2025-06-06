@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+touch /var/lib/apport/autoreport
+
+# start the autoreport service on installation
+if [ -x "/usr/bin/deb-systemd-helper" ]; then
+        deb-systemd-invoke start 'apport-autoreport.path' >/dev/null || true
+fi
+
+#DEBHELPER#
