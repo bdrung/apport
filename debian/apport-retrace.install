@@ -1,0 +1,5 @@
+usr/bin/apport-retrace
+usr/bin/crash-digger
+usr/bin/dupdb-admin
+usr/share/man/man1/apport-retrace.1
+usr/share/man/man1/dupdb-admin.1

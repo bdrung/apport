@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+# do not run in the source tree, as we want to check the system-installed
+# apport
+TESTDIR=${AUTOPKGTEST_TMP:-/tmp}
+mkdir -p "$TESTDIR"
+cp -r tests "$TESTDIR"
+cd "$TESTDIR"
+
+# clean up old crash reports
+rm -rf /var/crash/*
+
+# xvfb-run needed for dbus, dbus needed by test_python_crashes
+xvfb-run dbus-launch python3 -m pytest -ra -v tests/system/test_python_crashes.py tests/system/test_signal_crashes.py
