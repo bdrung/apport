@@ -10,6 +10,7 @@
 """Unit tests for apport.packaging_impl.apt_dpkg."""
 
 import pathlib
+import pickle
 import tempfile
 import unittest
 import unittest.mock
@@ -206,26 +207,37 @@ Components: main
         with tempfile.TemporaryDirectory() as workdir:
             # Test non-existing cache file
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
-            self.assertEqual(file2pkg, {b"release": b"resolute", b"arch": b"amd64"})
+            self.assertEqual(file2pkg, {})
 
             # Modify and save cache
             file2pkg[b"path/to/file"] = b"package1"
-            impl._save_contents_mapping(workdir, "resolute", "amd64")
+            impl._save_contents_mapping()
 
             # Test opening different release/arch
             file2pkg = impl._contents_mapping(workdir, "noble", "amd64")
-            self.assertEqual(file2pkg, {b"release": b"noble", b"arch": b"amd64"})
+            self.assertEqual(file2pkg, {})
 
             # Test loading contents mapping from cache file
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
-            self.assertEqual(
-                file2pkg,
-                {
-                    b"release": b"resolute",
-                    b"arch": b"amd64",
-                    b"path/to/file": b"package1",
-                },
+            self.assertEqual(file2pkg, {b"path/to/file": b"package1"})
+
+    def test_contents_mapping_load_legacy(self) -> None:
+        """Test _contents_mapping() loading cache file from before Apport 2.35.0."""
+        with tempfile.TemporaryDirectory() as workdir:
+            legacy_file2pkg = {
+                b"release": b"resolute",
+                b"arch": b"amd64",
+                b"path/to/file": b"package1",
+            }
+            mapping_path = (
+                pathlib.Path(workdir) / "contents_mapping-resolute-amd64.pickle"
             )
+            with mapping_path.open("wb") as mapping_file:
+                pickle.dump(legacy_file2pkg, mapping_file)
+
+            # pylint: disable-next=protected-access
+            file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
+            self.assertEqual(file2pkg, {b"path/to/file": b"package1"})
 
     def test_contents_mapping_truncated_file(self) -> None:
         """Test _contents_mapping() reading truncated files."""
@@ -233,7 +245,7 @@ Components: main
         with tempfile.TemporaryDirectory() as workdir:
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
             file2pkg[b"path/to/file"] = b"package1"
-            impl._save_contents_mapping(workdir, "resolute", "amd64")
+            impl._save_contents_mapping()
             mapping_path = (
                 pathlib.Path(workdir) / "contents_mapping-resolute-amd64.pickle"
             )
@@ -251,9 +263,7 @@ Components: main
 
                     # Test ignoring truncated file
                     file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
-                    self.assertEqual(
-                        file2pkg, {b"release": b"resolute", b"arch": b"amd64"}
-                    )
+                    self.assertEqual(file2pkg, {})
 
     def test_contents_skip_xenial_header(self) -> None:
         """Test _update_given_file2pkg_mapping skipping xenial Contents header."""

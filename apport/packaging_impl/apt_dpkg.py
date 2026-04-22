@@ -290,6 +290,7 @@ class _AptDpkgPackageInfo(PackageInfo):
         self._mirror: str | None = None
         self._virtual_mapping_obj: dict[str, set[str]] | None = None
         self._contents_mapping_obj: dict[bytes, bytes] | None = None
+        self._contents_mapping_file: pathlib.Path | None = None
         self._launchpad_base = "https://api.launchpad.net/devel"
         self._contents_update = False
 
@@ -323,16 +324,12 @@ class _AptDpkgPackageInfo(PackageInfo):
     def _contents_mapping(
         self, configdir: str, release: str, arch: str
     ) -> dict[bytes, bytes]:
-        if (
-            self._contents_mapping_obj
-            and self._contents_mapping_obj[b"release"] == release.encode()
-            and self._contents_mapping_obj[b"arch"] == arch.encode()
-        ):
-            return self._contents_mapping_obj
-
         mapping_file = (
             pathlib.Path(configdir) / f"contents_mapping-{release}-{arch}.pickle"
         )
+        if self._contents_mapping_obj and mapping_file == self._contents_mapping_file:
+            return self._contents_mapping_obj
+
         if mapping_file.exists() and mapping_file.stat().st_size == 0:
             mapping_file.unlink()
         try:
@@ -340,20 +337,21 @@ class _AptDpkgPackageInfo(PackageInfo):
                 self._contents_mapping_obj = pickle.load(fp)
             assert isinstance(self._contents_mapping_obj, dict)
         except (AssertionError, EOFError, FileNotFoundError, pickle.UnpicklingError):
-            self._contents_mapping_obj = {
-                b"release": release.encode(),
-                b"arch": arch.encode(),
-            }
+            self._contents_mapping_obj = {}
+        # Handle files from Apport < 2.35.0
+        if b"release" in self._contents_mapping_obj:
+            self._contents_mapping_obj.pop(b"release", None)
+            self._contents_mapping_obj.pop(b"arch", None)
+            self._contents_update = True
+        self._contents_mapping_file = mapping_file
 
         return self._contents_mapping_obj
 
-    def _save_contents_mapping(self, configdir: str, release: str, arch: str) -> None:
-        mapping_file = (
-            pathlib.Path(configdir) / f"contents_mapping-{release}-{arch}.pickle"
-        )
+    def _save_contents_mapping(self) -> None:
         if self._contents_mapping_obj is not None:
+            assert self._contents_mapping_file is not None
             try:
-                with mapping_file.open("wb") as fp:
+                with self._contents_mapping_file.open("wb") as fp:
                     pickle.dump(self._contents_mapping_obj, fp)
             # rather than crashing on systems with little memory just don't
             # write the crash file
@@ -1716,7 +1714,7 @@ class _AptDpkgPackageInfo(PackageInfo):
     ) -> dict[bytes, bytes]:
         file2pkg = self._contents_mapping(map_cachedir, release, arch)
         # if the mapping is empty build it
-        if not file2pkg or len(file2pkg) == 2:
+        if not file2pkg or len(file2pkg) == 0:
             self._contents_update = True
         # this is ordered by likelihood of installation with the most common
         # last
@@ -1734,7 +1732,7 @@ class _AptDpkgPackageInfo(PackageInfo):
 
         # the file only needs to be saved after an update
         if self._contents_update:
-            self._save_contents_mapping(map_cachedir, release, arch)
+            self._save_contents_mapping()
             # the update of the mapping only needs to be done once
             self._contents_update = False
 
