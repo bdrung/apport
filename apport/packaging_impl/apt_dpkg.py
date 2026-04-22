@@ -309,7 +309,7 @@ class _AptDpkgPackageInfo(PackageInfo):
             with mapping_file.open("rb") as fp:
                 self._virtual_mapping_obj = pickle.load(fp)
             assert isinstance(self._virtual_mapping_obj, dict)
-        except (AssertionError, FileNotFoundError):
+        except (AssertionError, EOFError, FileNotFoundError, pickle.UnpicklingError):
             self._virtual_mapping_obj = {}
 
         return self._virtual_mapping_obj
@@ -339,7 +339,7 @@ class _AptDpkgPackageInfo(PackageInfo):
             with mapping_file.open("rb") as fp:
                 self._contents_mapping_obj = pickle.load(fp)
             assert isinstance(self._contents_mapping_obj, dict)
-        except (AssertionError, FileNotFoundError):
+        except (AssertionError, EOFError, FileNotFoundError, pickle.UnpicklingError):
             self._contents_mapping_obj = {
                 b"release": release.encode(),
                 b"arch": arch.encode(),
