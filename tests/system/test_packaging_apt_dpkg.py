@@ -4,6 +4,7 @@
 
 import glob
 import gzip
+import locale
 import os
 import pathlib
 import shutil
@@ -17,6 +18,7 @@ import apt_pkg
 import pytest
 
 from apport.packaging_impl.apt_dpkg import _parse_deb822_sources, impl
+from tests.helper import restore_locale
 from tests.paths import get_test_data_directory
 
 if shutil.which("dpkg") is None:
@@ -347,10 +349,12 @@ def test_install_packages_system(
 
 
 @pytest.mark.requires_internet
+@restore_locale(locale.LC_MESSAGES)
 def test_install_packages_error(
     configdir: str, cachedir: str, rootdir: str, apt_style: AptStyle
 ) -> None:
     """install_packages() with errors"""
+    locale.setlocale(locale.LC_MESSAGES, "C.UTF-8")
     # sources.list with invalid format
     release = _setup_foonux_config(configdir, apt_style)
     with open(

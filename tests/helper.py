@@ -3,6 +3,7 @@
 import contextlib
 import importlib.machinery
 import importlib.util
+import locale
 import os
 import pathlib
 import shutil
@@ -80,6 +81,14 @@ def read_shebang(command: str) -> str | None:
     if not first_line.startswith(b"#!"):
         return None
     return first_line.decode().split(" ", 1)[0][2:]
+
+
+@contextlib.contextmanager
+def restore_locale(category: int) -> Generator[None]:
+    """Restore locale after leaving this context manager."""
+    orig_locale = locale.getlocale(category)
+    yield
+    locale.setlocale(category, orig_locale)
 
 
 @contextlib.contextmanager
