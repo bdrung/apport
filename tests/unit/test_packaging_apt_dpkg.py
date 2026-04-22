@@ -22,6 +22,7 @@ import apt.package
 from apport.packaging_impl.apt_dpkg import (
     _map_mirror_to_arch,
     _parse_deb822_sources,
+    _Path2Package,
     _read_mirror_file,
     impl,
 )
@@ -211,7 +212,7 @@ Components: main
 
             # Modify and save cache
             file2pkg[b"path/to/file"] = b"package1"
-            impl._save_contents_mapping()
+            file2pkg.save()
 
             # Test opening different release/arch
             file2pkg = impl._contents_mapping(workdir, "noble", "amd64")
@@ -245,7 +246,7 @@ Components: main
         with tempfile.TemporaryDirectory() as workdir:
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
             file2pkg[b"path/to/file"] = b"package1"
-            impl._save_contents_mapping()
+            file2pkg.save()
             mapping_path = (
                 pathlib.Path(workdir) / "contents_mapping-resolute-amd64.pickle"
             )
@@ -264,6 +265,10 @@ Components: main
                     # Test ignoring truncated file
                     file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
                     self.assertEqual(file2pkg, {})
+
+
+class TestPath2Package(unittest.TestCase):
+    """Unit tests for apport.packaging_impl.apt_dpkg._Path2Package class."""
 
     def test_contents_skip_xenial_header(self) -> None:
         """Test _update_given_file2pkg_mapping skipping xenial Contents header."""
@@ -306,11 +311,10 @@ FILE                                                    LOCATION
 bin/afio						    multiverse/utils/afio
 bin/archdetect						    utils/archdetect-deb
 """
-        file2pkg: dict[bytes, bytes] = {}
+        file2pkg = _Path2Package()
         open_mock = unittest.mock.mock_open(read_data=contents)
         with unittest.mock.patch("gzip.open", open_mock):
-            # pylint: disable-next=protected-access
-            impl._update_given_file2pkg_mapping(file2pkg, "/fake_Contents", "xenial")
+            file2pkg.update_from_contents_file("/fake_Contents", "xenial")
 
         self.assertEqual(
             file2pkg, {b"bin/afio": b"afio", b"bin/archdetect": b"archdetect-deb"}
@@ -352,11 +356,10 @@ usr/src/broadcom-sta.tar.xz				    restricted/admin/broadcom-sta-source
 var/lib/ieee-data/iab.txt				    net/ieee-data
 """
 
-        file2pkg: dict[bytes, bytes] = {}
+        file2pkg = _Path2Package()
         open_mock = unittest.mock.mock_open(read_data=contents)
         with unittest.mock.patch("gzip.open", open_mock):
-            # pylint: disable-next=protected-access
-            impl._update_given_file2pkg_mapping(file2pkg, "Contents-amd64", "noble")
+            file2pkg.update_from_contents_file("Contents-amd64", "noble")
 
         self.assertEqual(
             {k.decode(): v.decode() for k, v in file2pkg.items()},
@@ -391,11 +394,10 @@ var/lib/ieee-data/iab.txt				    net/ieee-data
             "/__init__.py universe/python/ilorest\n"
         )
 
-        file2pkg: dict[bytes, bytes] = {}
+        file2pkg = _Path2Package()
         open_mock = unittest.mock.mock_open(read_data=contents.encode())
         with unittest.mock.patch("gzip.open", open_mock):
-            # pylint: disable-next=protected-access
-            impl._update_given_file2pkg_mapping(file2pkg, "Contents-amd64", "noble")
+            file2pkg.update_from_contents_file("Contents-amd64", "noble")
 
         self.assertEqual(
             {k.decode(): v.decode() for k, v in file2pkg.items()},
@@ -406,6 +408,50 @@ var/lib/ieee-data/iab.txt				    net/ieee-data
             },
         )
         open_mock.assert_called_once_with("Contents-amd64", "rb")
+
+    def test_path2package(self) -> None:
+        """Basic tests for _Path2Package class."""
+        path2package = _Path2Package()
+        self.assertEqual(dict(path2package), {})
+        self.assertEqual(len(path2package), 0)
+        self.assertTrue(path2package.is_empty())
+        path2package[b"usr/bin/man"] = b"man-db"
+        path2package[b"bin/ip"] = b"iproute2"
+        self.assertEqual(
+            dict(path2package), {b"bin/ip": b"iproute2", b"usr/bin/man": b"man-db"}
+        )
+        self.assertEqual(len(path2package), 2)
+        self.assertEqual(path2package[b"bin/ip"], b"iproute2")
+        self.assertEqual(path2package.get(b"usr/bin/man"), b"man-db")
+        self.assertIsNone(path2package.get(b"usr/src/broadcom-sta.tar.xz"))
+        self.assertFalse(path2package.is_empty())
+        self.assertIn(b"bin/ip", path2package)
+        self.assertNotIn(b"usr/bin/git", path2package)
+        self.assertNotIn(42, path2package)
+
+    def test_path2package_overwrite(self) -> None:
+        """Test _Path2Package to overwrite existing values."""
+        path2package = _Path2Package()
+        path2package[b"path/to/file"] = b"package1"
+        self.assertEqual(path2package[b"path/to/file"], b"package1")
+        path2package[b"path/to/file"] = b"package2"
+        self.assertEqual(path2package[b"path/to/file"], b"package2")
+
+    def test_path2package_create_and_reopen(self) -> None:
+        """Test _Path2Package for openening an existing database."""
+        with tempfile.NamedTemporaryFile(suffix=".sqlite3") as db_file:
+            path2package = _Path2Package(pathlib.Path(db_file.name))
+            self.assertEqual(dict(path2package), {})
+            self.assertTrue(path2package.is_empty())
+            self.assertEqual(path2package.mapping_file, pathlib.Path(db_file.name))
+            path2package[b"bin/ip"] = b"iproute2"
+            path2package.save()
+            del path2package
+
+            path2package = _Path2Package(pathlib.Path(db_file.name))
+            self.assertEqual(dict(path2package), {b"bin/ip": b"iproute2"})
+            self.assertFalse(path2package.is_empty())
+            self.assertEqual(path2package.mapping_file, pathlib.Path(db_file.name))
 
 
 class TestPackaging(unittest.TestCase):

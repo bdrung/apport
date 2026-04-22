@@ -276,6 +276,68 @@ def _usr_merge_alternative(path: str) -> str | None:
     return None
 
 
+class _Path2Package(dict[bytes, bytes]):
+    """Path to Debian package mapping."""
+
+    def __init__(self, mapping_file: pathlib.Path | None = None) -> None:
+        self.mapping_file = mapping_file
+        if mapping_file is None:
+            return
+        if mapping_file.exists() and mapping_file.stat().st_size == 0:
+            mapping_file.unlink()
+        try:
+            with mapping_file.open("rb") as fp:
+                data = pickle.load(fp)
+            assert isinstance(data, dict)
+            super().__init__(data)
+        except (AssertionError, EOFError, FileNotFoundError, pickle.UnpicklingError):
+            pass
+
+    def is_empty(self) -> bool:
+        """Check if the database is empty."""
+        return len(self) == 0
+
+    def save(self) -> None:
+        """Write a pickled representation to the mapping file."""
+        assert self.mapping_file is not None
+        try:
+            with self.mapping_file.open("wb") as fp:
+                pickle.dump(dict(self), fp)
+        # rather than crashing on systems with little memory just don't
+        # write the crash file
+        except MemoryError:
+            pass
+
+    def update_from_contents_file(self, contents_filename: str, dist: str) -> None:
+        """Update database with entries from the Contents file.
+
+        Existing paths will be overwritten by new entries.
+        """
+        path_exclude_pattern = re.compile(
+            rb"^:|(boot|var|usr/(include|src|[^/]+/include"
+            rb"|share/(doc|gocode|help|icons|locale|man|texlive)))/"
+        )
+        with gzip.open(contents_filename, "rb") as contents:
+            if dist in {"trusty", "xenial"}:
+                # the first 32 lines are descriptive only for these
+                # releases
+                for _ in range(32):
+                    next(contents)
+
+            for line in contents:
+                if path_exclude_pattern.match(line):
+                    continue
+                path, column2 = line.rsplit(maxsplit=1)
+                package = column2.split(b",")[0].split(b"/")[-1]
+                if path in self:
+                    if package == self[path]:
+                        continue
+                    # if the package was updated use the update
+                    # b/c everyone should have packages from
+                    # -updates and -security installed
+                self[path] = package
+
+
 class _AptDpkgPackageInfo(PackageInfo):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """Concrete apport.packaging.PackageInfo class implementation for
@@ -289,8 +351,7 @@ class _AptDpkgPackageInfo(PackageInfo):
         self._contents_dir: str | None = None
         self._mirror: str | None = None
         self._virtual_mapping_obj: dict[str, set[str]] | None = None
-        self._contents_mapping_obj: dict[bytes, bytes] | None = None
-        self._contents_mapping_file: pathlib.Path | None = None
+        self._contents_mapping_obj: _Path2Package | None = None
         self._launchpad_base = "https://api.launchpad.net/devel"
         self._contents_update = False
 
@@ -323,40 +384,24 @@ class _AptDpkgPackageInfo(PackageInfo):
 
     def _contents_mapping(
         self, configdir: str, release: str, arch: str
-    ) -> dict[bytes, bytes]:
+    ) -> _Path2Package:
         mapping_file = (
             pathlib.Path(configdir) / f"contents_mapping-{release}-{arch}.pickle"
         )
-        if self._contents_mapping_obj and mapping_file == self._contents_mapping_file:
+        if (
+            self._contents_mapping_obj
+            and self._contents_mapping_obj.mapping_file == mapping_file
+        ):
             return self._contents_mapping_obj
 
-        if mapping_file.exists() and mapping_file.stat().st_size == 0:
-            mapping_file.unlink()
-        try:
-            with mapping_file.open("rb") as fp:
-                self._contents_mapping_obj = pickle.load(fp)
-            assert isinstance(self._contents_mapping_obj, dict)
-        except (AssertionError, EOFError, FileNotFoundError, pickle.UnpicklingError):
-            self._contents_mapping_obj = {}
+        self._contents_mapping_obj = _Path2Package(mapping_file)
         # Handle files from Apport < 2.35.0
         if b"release" in self._contents_mapping_obj:
             self._contents_mapping_obj.pop(b"release", None)
             self._contents_mapping_obj.pop(b"arch", None)
             self._contents_update = True
-        self._contents_mapping_file = mapping_file
 
         return self._contents_mapping_obj
-
-    def _save_contents_mapping(self) -> None:
-        if self._contents_mapping_obj is not None:
-            assert self._contents_mapping_file is not None
-            try:
-                with self._contents_mapping_file.open("wb") as fp:
-                    pickle.dump(self._contents_mapping_obj, fp)
-            # rather than crashing on systems with little memory just don't
-            # write the crash file
-            except MemoryError:
-                pass
 
     def _clear_apt_cache(self) -> None:
         # The rootdir option to apt.Cache modifies the global state
@@ -1681,40 +1726,12 @@ class _AptDpkgPackageInfo(PackageInfo):
 
         return contents_filename
 
-    @staticmethod
-    def _update_given_file2pkg_mapping(
-        file2pkg: dict[bytes, bytes], contents_filename: str, dist: str
-    ) -> None:
-        path_exclude_pattern = re.compile(
-            rb"^:|(boot|var|usr/(include|src|[^/]+/include"
-            rb"|share/(doc|gocode|help|icons|locale|man|texlive)))/"
-        )
-        with gzip.open(contents_filename, "rb") as contents:
-            if dist in {"trusty", "xenial"}:
-                # the first 32 lines are descriptive only for these
-                # releases
-                for _ in range(32):
-                    next(contents)
-
-            for line in contents:
-                if path_exclude_pattern.match(line):
-                    continue
-                path, column2 = line.rsplit(maxsplit=1)
-                package = column2.split(b",")[0].split(b"/")[-1]
-                if path in file2pkg:
-                    if package == file2pkg[path]:
-                        continue
-                    # if the package was updated use the update
-                    # b/c everyone should have packages from
-                    # -updates and -security installed
-                file2pkg[path] = package
-
     def _get_file2pkg_mapping(
         self, map_cachedir: str, release: str, arch: str
-    ) -> dict[bytes, bytes]:
+    ) -> _Path2Package:
         file2pkg = self._contents_mapping(map_cachedir, release, arch)
         # if the mapping is empty build it
-        if not file2pkg or len(file2pkg) == 0:
+        if file2pkg.is_empty():
             self._contents_update = True
         # this is ordered by likelihood of installation with the most common
         # last
@@ -1728,11 +1745,11 @@ class _AptDpkgPackageInfo(PackageInfo):
             # if any of the Contents files were updated we need to update the
             # map because the ordering in which is created is important
             if self._contents_update:
-                self._update_given_file2pkg_mapping(file2pkg, contents_filename, dist)
+                file2pkg.update_from_contents_file(contents_filename, dist)
 
         # the file only needs to be saved after an update
         if self._contents_update:
-            self._save_contents_mapping()
+            file2pkg.save()
             # the update of the mapping only needs to be done once
             self._contents_update = False
 
