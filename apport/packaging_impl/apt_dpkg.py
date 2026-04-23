@@ -57,6 +57,7 @@ import apt_pkg
 from aptsources.sourceslist import Deb822SourceEntry, SourceEntry
 
 import apport.logging
+from apport.debugging import log, log_call
 from apport.package_info import PackageInfo
 
 
@@ -310,6 +311,7 @@ class _Path2Package(Mapping[str, str]):
     """
 
     def __init__(self, database_file: pathlib.Path | None = None) -> None:
+        log_call()
         self.database_file = database_file
         self.connection = self._connect()
         if (
@@ -368,6 +370,7 @@ class _Path2Package(Mapping[str, str]):
         self.connection.commit()
 
     def __getitem__(self, key: str) -> str:
+        log_call()
         directory, name = self._split_path(key)
         cursor = self.connection.execute(
             "SELECT package FROM directory_name_package "
@@ -468,6 +471,7 @@ class _Path2Package(Mapping[str, str]):
 
         Existing paths will be overwritten by new entries.
         """
+        log_call()
         cursor = self.connection.cursor()
         new_path_package: list[tuple[int, str, int]] = []
         new_package_id: list[tuple[int, str]] = []
@@ -1913,6 +1917,7 @@ class _AptDpkgPackageInfo(PackageInfo):
     def _get_file2pkg_mapping(
         self, map_cachedir: str, release: str, arch: str
     ) -> _Path2Package:
+        log_call()
         file2pkg = self._contents_mapping(map_cachedir, release, arch)
         # if the mapping is empty build it
         if file2pkg.is_empty():
@@ -1939,6 +1944,7 @@ class _AptDpkgPackageInfo(PackageInfo):
         self, file: str, map_cachedir: str | None, release: str | None, arch: str | None
     ) -> str | None:
         """Search file in Contents.gz."""
+        log_call()
         if not map_cachedir:
             if not self._contents_dir:
                 self._contents_dir = tempfile.mkdtemp()
@@ -1952,6 +1958,7 @@ class _AptDpkgPackageInfo(PackageInfo):
             release = self._distro_release_to_codename(release)
 
         contents_mapping = self._get_file2pkg_mapping(map_cachedir, release, arch)
+        log("self._get_file2pkg_mapping done")
 
         if file[0] != "/":
             file = f"/{file}"
