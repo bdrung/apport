@@ -205,9 +205,10 @@ jobs:
       - name: Run system tests
         env:
           GDK_BACKEND: x11
+          APPORT_DEBUG: "1"
         run: >
           xvfb-run python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0 tests/system/
+          --cov-report=xml --durations=0 -s tests/system/
       - name: Stop D-Bus daemon
         run: kill $(cat /run/dbus/pid)
       - name: Upload coverage
@@ -253,12 +254,13 @@ jobs:
       - name: Run system tests
         env:
           GDK_BACKEND: x11
+          APPORT_DEBUG: "1"
         run: >
           WORKDIR=$(mktemp -d -t apport.XXXXXXXXXX)
           && cp -r tests "$WORKDIR"
           && cd "$WORKDIR"
           && sudo xvfb-run python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0 tests/system/
+          --cov-report=xml --durations=0 -s tests/system/
           && cd -
           && cp "$WORKDIR/coverage.xml" .
       - name: Upload coverage
