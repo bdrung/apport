@@ -277,12 +277,34 @@ def _usr_merge_alternative(path: str) -> str | None:
     return None
 
 
+class _Value2ID(Mapping[str, int]):
+    """Inverse cache for a integer key to string value database table."""
+
+    def __init__(self) -> None:
+        self.data: dict[str, int] = {}
+        self.max_id: int = 0
+
+    def __getitem__(self, key: str) -> int:
+        return self.data[key]
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.data)
+
+    def add(self, value: str) -> int:
+        """Add a new value to the cache and return the assigned ID."""
+        self.max_id += 1
+        self.data[value] = self.max_id
+        return self.max_id
+
+
 class _Path2Package(Mapping[str, str]):
     """Path to Debian package mapping.
 
     A backing SQLite database is open on __init__ and closed on object
-    deletion. The data is stored in unnormalized form for creation speed
-    and code simplicity.
+    deletion. The data is stored in normalized form.
 
     If database_file is set to `None` an in-memory database will be used.
     """
@@ -296,6 +318,12 @@ class _Path2Package(Mapping[str, str]):
             or database_file.stat().st_size == 0
         ):
             self._create_tables()
+            self.package_id_cache = _Value2ID()
+            self.directory_id_cache = _Value2ID()
+        else:
+            # FIXME: load cache
+            self.package_id_cache = _Value2ID()
+            self.directory_id_cache = _Value2ID()
 
     def __del__(self) -> None:
         """Close the SQLite database connection on object deletion."""
@@ -319,16 +347,36 @@ class _Path2Package(Mapping[str, str]):
     def _create_tables(self) -> None:
         """Create SQLite database tables."""
         cursor = self.connection.cursor()
-        cursor.execute(
-            "CREATE TABLE path_package("
-            "  path TEXT PRIMARY KEY UNIQUE NOT NULL,"
-            "  package TEXT NOT NULL)"
+        cursor.executescript(
+            "CREATE TABLE packages ("
+            "  id integer PRIMARY KEY NOT NULL,"
+            "  package text NOT NULL UNIQUE"
+            ");"
+            "CREATE TABLE directories ("
+            "  id integer PRIMARY KEY NOT NULL,"
+            "  directory text NOT NULL UNIQUE"
+            ");"
+            "CREATE TABLE directory_name_package ("
+            "  directory_id integer NOT NULL,"
+            "  name string NOT NULL,"
+            "  package_id integer NOT NULL,"
+            "  PRIMARY KEY (directory_id, name),"
+            "  FOREIGN KEY (directory_id) REFERENCES directories(id)"
+            "  FOREIGN KEY (package_id) REFERENCES packages(id)"
+            ");"
         )
         self.connection.commit()
 
     def __getitem__(self, key: str) -> str:
+        directory, name = self._split_path(key)
         cursor = self.connection.execute(
-            "SELECT package FROM path_package WHERE path = ?", (key,)
+            "SELECT package FROM directory_name_package "
+            "LEFT JOIN directories "
+            "ON directory_name_package.directory_id = directories.id "
+            "LEFT JOIN packages "
+            "ON directory_name_package.package_id = packages.id "
+            "WHERE directory = ? AND name = ?",
+            (directory, name),
         )
         found = cursor.fetchone()
         if found is None:
@@ -337,16 +385,19 @@ class _Path2Package(Mapping[str, str]):
 
     def __iter__(self) -> Iterator[str]:
         cursor = self.connection.execute(
-            "SELECT path FROM path_package ORDER BY path ASC"
+            "SELECT directory, name FROM directory_name_package "
+            "LEFT JOIN directories "
+            "ON directory_name_package.directory_id = directories.id "
+            "ORDER BY directory ASC, name ASC"
         )
         while True:
             found = cursor.fetchone()
             if found is None:
                 return
-            yield found[0]
+            yield f"{found[0]}/{found[1]}"
 
     def __len__(self) -> int:
-        cursor = self.connection.execute("SELECT COUNT(*) FROM path_package")
+        cursor = self.connection.execute("SELECT COUNT(*) FROM directory_name_package")
         found = cursor.fetchone()
         assert found is not None
         return found[0]
@@ -358,25 +409,58 @@ class _Path2Package(Mapping[str, str]):
         not committed for better performance. A database commit needs
         to be done to persist the change.
         """
+        package_id = self.package_id_cache.get(value)
+        if package_id is None:
+            package_id = self.package_id_cache.add(value)
+            self.connection.execute(
+                "INSERT INTO packages VALUES(?, ?)", (package_id, value)
+            )
+        directory, name = self._split_path(key)
+        directory_id = self.directory_id_cache.get(directory)
+        if directory_id is None:
+            directory_id = self.directory_id_cache.add(directory)
+            self.connection.execute(
+                "INSERT INTO directories VALUES(?, ?)", (directory_id, directory)
+            )
         self.connection.execute(
-            "INSERT INTO path_package VALUES(?, ?) "
-            "ON CONFLICT(path) DO UPDATE SET package=excluded.package",
-            (key, value),
+            "INSERT INTO directory_name_package VALUES(?, ?, ?) "
+            "ON CONFLICT(directory_id, name) "
+            "DO UPDATE SET package_id=excluded.package_id",
+            (directory_id, name, package_id),
         )
 
     def is_empty(self) -> bool:
         """Check if the database is empty."""
-        cursor = self.connection.execute("SELECT 1 FROM path_package LIMIT 1")
+        cursor = self.connection.execute("SELECT 1 FROM directory_name_package LIMIT 1")
         return cursor.fetchone() is None
 
     @staticmethod
-    def _insert_many(cursor: sqlite3.Cursor, path2pkg: Mapping[str, str]) -> None:
+    def _insert_many(
+        cursor: sqlite3.Cursor,
+        new_package_id: list[tuple[int, str]],
+        new_directory_id: list[tuple[int, str]],
+        new_directory_name_package: list[tuple[int, str, int]],
+    ) -> None:
+        if new_package_id:
+            cursor.executemany("INSERT INTO packages VALUES(?, ?)", new_package_id)
+            new_package_id.clear()
+        if new_directory_id:
+            cursor.executemany("INSERT INTO directories VALUES(?, ?)", new_directory_id)
+            new_directory_id.clear()
         cursor.executemany(
-            "INSERT INTO path_package VALUES(?, ?) "
-            "ON CONFLICT(path) DO UPDATE SET package=excluded.package",
-            path2pkg.items(),
+            "INSERT INTO directory_name_package VALUES(?, ?, ?) "
+            "ON CONFLICT(directory_id, name) "
+            "DO UPDATE SET package_id=excluded.package_id",
+            new_directory_name_package,
         )
+        new_directory_name_package.clear()
 
+    @staticmethod
+    def _split_path(path: str) -> tuple[str, str]:
+        parts = path.split("/", maxsplit=5)
+        return "/".join(parts[:-1]), parts[-1]
+
+    # pylint: disable-next=too-many-locals
     def update_from_contents_file(
         self, contents_filename: str, dist: str, group_inserts: int = 100
     ) -> None:
@@ -385,7 +469,9 @@ class _Path2Package(Mapping[str, str]):
         Existing paths will be overwritten by new entries.
         """
         cursor = self.connection.cursor()
-        path2pkg = {}
+        new_path_package: list[tuple[int, str, int]] = []
+        new_package_id: list[tuple[int, str]] = []
+        new_directory_id: list[tuple[int, str]] = []
 
         path_exclude_pattern = re.compile(
             r"^:|(boot|var|usr/(include|src|[^/]+/include"
@@ -398,19 +484,49 @@ class _Path2Package(Mapping[str, str]):
                 for _ in range(32):
                     next(contents)
 
+            # paths: list[tuple[str]] = []
+            # current_package: str | None = None
             for line in contents:
                 if path_exclude_pattern.match(line):
                     continue
                 path, column2 = line.rsplit(maxsplit=1)
                 package = column2.split(",")[0].split("/")[-1]
 
-                path2pkg[path] = package
-                if len(path2pkg) >= group_inserts:
-                    self._insert_many(cursor, path2pkg)
-                    path2pkg = {}
-        if path2pkg:
-            self._insert_many(cursor, path2pkg)
+                package_id = self.package_id_cache.get(package)
+                if package_id is None:
+                    package_id = self.package_id_cache.add(package)
+                    new_package_id.append((package_id, package))
+
+                directory, name = self._split_path(path)
+
+                directory_id = self.directory_id_cache.get(directory)
+                if directory_id is None:
+                    directory_id = self.directory_id_cache.add(directory)
+                    new_directory_id.append((directory_id, directory))
+
+                new_path_package.append((directory_id, name, package_id))
+                if len(new_path_package) > group_inserts:
+                    self._insert_many(
+                        cursor, new_package_id, new_directory_id, new_path_package
+                    )
+        if new_path_package:
+            self._insert_many(
+                cursor, new_package_id, new_directory_id, new_path_package
+            )
         self.connection.commit()
+
+    def __contains__(self, o: object) -> bool:
+        if not isinstance(o, str):
+            return False
+        directory, name = self._split_path(o)
+        cursor = self.connection.execute(
+            "SELECT 1 FROM directory_name_package "
+            "LEFT JOIN directories "
+            "ON directory_name_package.directory_id = directories.id "
+            "WHERE directory = ? AND name = ?",
+            (directory, name),
+        )
+        return cursor.fetchone() is not None
 
 
 class _AptDpkgPackageInfo(PackageInfo):
