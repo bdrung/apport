@@ -1000,6 +1000,8 @@ class ProblemReport(collections.UserDict):
                 f"key '{k}' contains invalid characters"
                 f" (only numbers, letters, '.', '_', and '-' are allowed)"
             )
+        if not isinstance(v, str) and k in _STRING_KEYS:
+            raise TypeError(f"value for key {k} must be a string")
         # value must be a string or a CompressedValue or a file reference
         # (tuple (string|file [, bool, [, max_size [, fail_on_empty]]]))
         if not (

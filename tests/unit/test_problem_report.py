@@ -111,6 +111,12 @@ class T(unittest.TestCase):  # pylint: disable=too-many-public-methods
         del pr["Date"]
         self.assertIsNone(pr.get_timestamp())
 
+    def test_setitem_string_key(self) -> None:
+        """Test TypeError when not setting a string to string keys."""
+        report = problem_report.ProblemReport()
+        with self.assertRaisesRegex(TypeError, " ProcMaps must be a string"):
+            report["ProcMaps"] = b"non-string value"
+
     def test_consistency_checks(self) -> None:
         """Various error conditions."""
         pr = problem_report.ProblemReport()
