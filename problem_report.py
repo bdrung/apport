@@ -9,6 +9,7 @@
 # option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
 # the full text of the license.
 
+# pylint: disable=too-many-lines
 # TODO: Address following pylint complaints
 # pylint: disable=invalid-name
 
@@ -354,6 +355,66 @@ class CompressedValue:
         return self.get_value().splitlines()
 
 
+_STRING_KEYS = {
+    "Annotation",
+    "Architecture",
+    "AssertionMessage",
+    "AuditLog",
+    "CheckboxSubmission",
+    "CrashCounter",
+    "CrashDB",
+    "Date",
+    "DbusErrorAnalysis",
+    "Dependencies",
+    "DesktopFile",
+    "DialogBody",
+    "Disassembly",
+    "DistroRelease",
+    "DuplicateSignature",
+    "ExecutablePath",
+    "ExecutableTimestamp",
+    "Failure",
+    "GLibAssertionMessage",
+    "InterpreterPath",
+    "KernLog",
+    "MachineType",
+    "MainClassUrl",
+    "NonfreeKernelModules",
+    "OopsText",
+    "OpenFds",
+    "Package",
+    "PackageArchitecture",
+    "ProblemType",
+    "ProcCmdline",
+    "ProcCwd",
+    "ProcEnviron",
+    "ProcMaps",
+    "ProcStatus",
+    "Registers",
+    "RespawnCommand",
+    "SegvAnalysis",
+    "SegvAnalysisError",
+    "Signal",
+    "SignalName",
+    "SnapTags",
+    "SourcePackage",
+    "StackTrace",
+    "Stacktrace",
+    "StacktraceSource",
+    "StacktraceTop",
+    "Tags",
+    "ThreadStacktrace",
+    "Title",
+    "Traceback",
+    "Uname",
+    "UnreportableReason",
+    "UserGroups",
+    "_KnownReport",
+    "_PythonExceptionQualifier",
+    "dmi.bios.version",
+}
+
+
 class ProblemReport(collections.UserDict):
     """Class to store, load, and handle problem reports."""
 
@@ -419,12 +480,11 @@ class ProblemReport(collections.UserDict):
                         name=key, compressed_value=b"".join(iterator)
                     )
                 else:
-                    self.data[key] = self._try_unicode(
-                        b"".join(CompressedValue.decode_compressed_stream(iterator))
-                    )
+                    value = b"".join(CompressedValue.decode_compressed_stream(iterator))
+                    self.data[key] = self._try_unicode(key, value)
 
             else:
-                self.data[key] = self._try_unicode(b"".join(iterator))
+                self.data[key] = self._try_unicode(key, b"".join(iterator))
 
             if remaining_keys is not None:
                 remaining_keys.remove(key)
@@ -516,8 +576,10 @@ class ProblemReport(collections.UserDict):
         return False
 
     @classmethod
-    def _try_unicode(cls, value: bytes | str) -> bytes | str:
+    def _try_unicode(cls, key: str, value: bytes | str) -> bytes | str:
         """Try to convert bytearray value to Unicode."""
+        if key in _STRING_KEYS and isinstance(value, bytes):
+            return value.decode("UTF-8")
         if isinstance(value, bytes) and not cls.is_binary(value):
             try:
                 return value.decode("UTF-8")
