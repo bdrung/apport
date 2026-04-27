@@ -10,6 +10,7 @@
 """Unit tests for apport.packaging_impl.apt_dpkg."""
 
 import pathlib
+import pickle
 import tempfile
 import unittest
 import unittest.mock
@@ -198,9 +199,9 @@ Components: main
         """get_file_package() on uninstalled usrmerge packages."""
         # Data from Ubuntu 24.04 (noble)
         _get_file2pkg_mapping_mock.return_value = {
-            b"usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2": b"libc6",
-            b"usr/lib/x86_64-linux-gnu/libc.so.6": b"libc6",
-            b"usr/libx32/libc.so.6": b"libc6-x32",
+            "usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2": "libc6",
+            "usr/lib/x86_64-linux-gnu/libc.so.6": "libc6",
+            "usr/libx32/libc.so.6": "libc6-x32",
         }
 
         pkg = impl.get_file_package(
@@ -218,33 +219,47 @@ Components: main
         with tempfile.TemporaryDirectory() as workdir:
             # Test non-existing cache file
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
-            self.assertEqual(file2pkg, {b"release": b"resolute", b"arch": b"amd64"})
+            self.assertEqual(file2pkg, {"release": "resolute", "arch": "amd64"})
 
             # Modify and save cache
-            file2pkg[b"path/to/file"] = b"package1"
+            file2pkg["path/to/file"] = "package1"
             impl._save_contents_mapping(workdir, "resolute", "amd64")
 
             # Test opening different release/arch
             file2pkg = impl._contents_mapping(workdir, "noble", "amd64")
-            self.assertEqual(file2pkg, {b"release": b"noble", b"arch": b"amd64"})
+            self.assertEqual(file2pkg, {"release": "noble", "arch": "amd64"})
 
             # Test loading contents mapping from cache file
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
             self.assertEqual(
                 file2pkg,
-                {
-                    b"release": b"resolute",
-                    b"arch": b"amd64",
-                    b"path/to/file": b"package1",
-                },
+                {"release": "resolute", "arch": "amd64", "path/to/file": "package1"},
             )
+
+    def test_contents_mapping_load_legacy_resolute(self) -> None:
+        """Test _contents_mapping() discarding cache file from Apport 2.34.0."""
+        with tempfile.TemporaryDirectory() as workdir:
+            legacy_file2pkg = {
+                b"release": b"resolute",
+                b"arch": b"amd64",
+                b"path/to/file": b"package1",
+            }
+            mapping_path = (
+                pathlib.Path(workdir) / "contents_mapping-resolute-amd64.pickle"
+            )
+            with mapping_path.open("wb") as mapping_file:
+                pickle.dump(legacy_file2pkg, mapping_file)
+
+            # pylint: disable-next=protected-access
+            file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
+            self.assertEqual(file2pkg, {"release": "resolute", "arch": "amd64"})
 
     def test_contents_mapping_truncated_file(self) -> None:
         """Test _contents_mapping() reading truncated files."""
         # pylint: disable=protected-access
         with tempfile.TemporaryDirectory() as workdir:
             file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
-            file2pkg[b"path/to/file"] = b"package1"
+            file2pkg["path/to/file"] = "package1"
             impl._save_contents_mapping(workdir, "resolute", "amd64")
             mapping_path = (
                 pathlib.Path(workdir) / "contents_mapping-resolute-amd64.pickle"
@@ -261,15 +276,13 @@ Components: main
 
                     # Test ignoring truncated file
                     file2pkg = impl._contents_mapping(workdir, "resolute", "amd64")
-                    self.assertEqual(
-                        file2pkg, {b"release": b"resolute", b"arch": b"amd64"}
-                    )
+                    self.assertEqual(file2pkg, {"release": "resolute", "arch": "amd64"})
 
     def test_contents_skip_xenial_header(self) -> None:
         """Test _update_given_file2pkg_mapping skipping xenial Contents header."""
         # Header taken from
         # http://archive.ubuntu.com/ubuntu/dists/xenial/Contents-amd64.gz
-        contents = b"""\
+        contents = """\
 This file maps each file available in the Ubuntu
 system to the package from which it originates.  It includes packages
 from the DIST distribution for the ARCH architecture.
@@ -306,7 +319,7 @@ FILE                                                    LOCATION
 bin/afio						    multiverse/utils/afio
 bin/archdetect						    utils/archdetect-deb
 """
-        file2pkg: dict[bytes, bytes] = {}
+        file2pkg: dict[str, str] = {}
         open_mock = unittest.mock.mock_open(read_data=contents)
         with unittest.mock.patch("gzip.open", open_mock):
             # pylint: disable-next=protected-access
@@ -315,18 +328,18 @@ bin/archdetect						    utils/archdetect-deb
         self.assertEqual(
             file2pkg,
             {
-                b":sexsend:sexget:": b"fex",
-                b"bin/afio": b"afio",
-                b"bin/archdetect": b"archdetect-deb",
+                ":sexsend:sexget:": "fex",
+                "bin/afio": "afio",
+                "bin/archdetect": "archdetect-deb",
             },
         )
-        open_mock.assert_called_once_with("/fake_Contents", "rb")
+        open_mock.assert_called_once_with("/fake_Contents", "rt")
 
     def test_contents_path_filering(self) -> None:
         """Test _update_given_file2pkg_mapping to ignore unrelevant files."""
         # Test content taken from
         # http://archive.ubuntu.com/ubuntu/dists/noble/Contents-amd64.gz
-        contents = b"""\
+        contents = """\
 bin/ip							    net/iproute2
 boot/ipxe.efi						    admin/grub-ipxe
 etc/dput.cf						    devel/dput
@@ -362,14 +375,14 @@ usr/src/broadcom-sta.tar.xz				    restricted/admin/broadcom-sta-source
 var/lib/ieee-data/iab.txt				    net/ieee-data
 """
 
-        file2pkg: dict[bytes, bytes] = {}
+        file2pkg: dict[str, str] = {}
         open_mock = unittest.mock.mock_open(read_data=contents)
         with unittest.mock.patch("gzip.open", open_mock):
             # pylint: disable-next=protected-access
             impl._update_given_file2pkg_mapping(file2pkg, "Contents-amd64", "noble")
 
         self.assertEqual(
-            {k.decode(): v.decode() for k, v in file2pkg.items()},
+            file2pkg,
             {
                 "bin/ip": "iproute2",
                 "boot/ipxe.efi": "grub-ipxe",
@@ -390,7 +403,7 @@ var/lib/ieee-data/iab.txt				    net/ieee-data
                 "var/lib/ieee-data/iab.txt": "ieee-data",
             },
         )
-        open_mock.assert_called_once_with("Contents-amd64", "rb")
+        open_mock.assert_called_once_with("Contents-amd64", "rt")
 
     def test_contents_parse_path_with_spaces(self) -> None:
         """Test _update_given_file2pkg_mapping to parse Contents file correctly."""
@@ -403,21 +416,21 @@ var/lib/ieee-data/iab.txt				    net/ieee-data
             "/__init__.py universe/python/ilorest\n"
         )
 
-        file2pkg: dict[bytes, bytes] = {}
-        open_mock = unittest.mock.mock_open(read_data=contents.encode())
+        file2pkg: dict[str, str] = {}
+        open_mock = unittest.mock.mock_open(read_data=contents)
         with unittest.mock.patch("gzip.open", open_mock):
             # pylint: disable-next=protected-access
             impl._update_given_file2pkg_mapping(file2pkg, "Contents-amd64", "noble")
 
         self.assertEqual(
-            {k.decode(): v.decode() for k, v in file2pkg.items()},
+            file2pkg,
             {
                 "usr/lib/iannix/Tools/JavaScript Library.js": "iannix",
                 "usr/lib/python3/dist-packages/ilorest/extensions/BIOS COMMANDS"
                 "/__init__.py": "ilorest",
             },
         )
-        open_mock.assert_called_once_with("Contents-amd64", "rb")
+        open_mock.assert_called_once_with("Contents-amd64", "rt")
 
 
 class TestPackaging(unittest.TestCase):
