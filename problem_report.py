@@ -113,6 +113,28 @@ def _create_compressed_attachment(name: str, value: bytes) -> email.mime.base.MI
     return attachment
 
 
+def _decode_compressed_stream(entry: Iterator[bytes]) -> Iterator[bytes]:
+    """Decode the given compressed value (iterator version)."""
+    block = next(entry, None)
+    if block is None:
+        return
+    if block.startswith(ZSTANDARD_MAGIC_NUMBER):
+        yield from _zstandard_decoder(entry, block)
+        return
+    # skip gzip header, if present
+    if block.startswith(GZIP_HEADER_START):
+        decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
+        yield decompressor.decompress(_strip_gzip_header(block))
+    else:
+        # legacy zlib-only format used default block size
+        decompressor = zlib.decompressobj()
+        yield decompressor.decompress(block)
+
+    for block in entry:
+        yield decompressor.decompress(block)
+    yield decompressor.flush()
+
+
 def _derive_compression(name: str, value: bytes) -> tuple[str, str]:
     if value.startswith(GZIP_HEADER_START):
         return ("gzip", ".gz")
@@ -276,28 +298,6 @@ class CompressedValue:
         """
         return ((self.get_compressed_size() + 2) // 3) * 4
 
-    @staticmethod
-    def decode_compressed_stream(entry: Iterator[bytes]) -> Iterator[bytes]:
-        """Decode the given compressed value (iterator version)."""
-        block = next(entry, None)
-        if block is None:
-            return
-        if block.startswith(ZSTANDARD_MAGIC_NUMBER):
-            yield from _zstandard_decoder(entry, block)
-            return
-        # skip gzip header, if present
-        if block.startswith(GZIP_HEADER_START):
-            decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
-            yield decompressor.decompress(_strip_gzip_header(block))
-        else:
-            # legacy zlib-only format used default block size
-            decompressor = zlib.decompressobj()
-            yield decompressor.decompress(block)
-
-        for block in entry:
-            yield decompressor.decompress(block)
-        yield decompressor.flush()
-
     def get_value(self) -> bytes:
         """Return uncompressed value."""
         assert self.compressed_value is not None
@@ -344,7 +344,7 @@ class CompressedValue:
 
         # legacy zlib format and zstandard
         length = 0
-        for block in self.decode_compressed_stream(self.iter_compressed()):
+        for block in _decode_compressed_stream(self.iter_compressed()):
             length += len(block)
         return length
 
@@ -479,7 +479,7 @@ class ProblemReport(collections.UserDict):
                         name=key, compressed_value=b"".join(iterator)
                     )
                 else:
-                    value = b"".join(CompressedValue.decode_compressed_stream(iterator))
+                    value = b"".join(_decode_compressed_stream(iterator))
                     self.data[key] = self._try_unicode(key, value)
 
             else:
@@ -523,7 +523,7 @@ class ProblemReport(collections.UserDict):
             key_path = os.path.join(directory, key)
             try:
                 with open(key_path, "wb") as out:
-                    for block in CompressedValue.decode_compressed_stream(iterator):
+                    for block in _decode_compressed_stream(iterator):
                         out.write(block)
             except OSError as error:
                 raise OSError(f"unable to open {key_path}") from error
