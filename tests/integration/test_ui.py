@@ -844,9 +844,9 @@ class T(unittest.TestCase):
         assert self.ui.report
 
         kernel_package = apport.packaging.get_kernel_package()
-        self.assertEqual(
+        self.assertRegex(
             self.ui.report["Package"],
-            f"{kernel_package} {get_version_mock.return_value}",
+            f"^{kernel_package} {get_version_mock.return_value}",
         )
         get_version_mock.assert_any_call(kernel_package)
 
