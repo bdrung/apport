@@ -1,3 +1,9 @@
+apport (2.35.0-0ubuntu1) resolute; urgency=medium
+
+  * New upstream release.
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Wed, 20 May 2026 00:33:39 +0200
+
 apport (2.34.0-0ubuntu2) resolute; urgency=medium
 
   * fix Default-to-Ubuntu-crash-DB.patch to default to ubuntu again
