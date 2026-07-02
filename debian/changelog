@@ -1,3 +1,9 @@
+apport (2.36.0-0ubuntu1) stonking; urgency=medium
+
+  * New upstream release.
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Thu, 02 Jul 2026 21:58:47 +0200
+
 apport (2.35.0-0ubuntu1) stonking; urgency=medium
 
   * New upstream release.
