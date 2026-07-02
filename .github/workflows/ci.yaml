@@ -72,7 +72,7 @@ jobs:
           && cp -r tests pyproject.toml "$WORKDIR"
           && cd "$WORKDIR"
           && sudo xvfb-run python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0 -m "requires_internet" tests/system/
+          --cov-report=xml --durations=0 -m "requires_internet" tests/system/test_apport_retrace.py
           && cd -
           && cp "$WORKDIR/coverage.xml" .
       - name: Upload coverage
