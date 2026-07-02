@@ -32,7 +32,7 @@ env:
     ubuntu-dbgsym-keyring ubuntu-keyring xterm xvfb
   system_internet_deps: >
     chaos-marmosets dpkg-dev gdb-multiarch ubuntu-dbgsym-keyring ubuntu-keyring
-    valgrind
+    valgrind psmisc python3-systemd
 
 jobs:
   system-internet-installed:
