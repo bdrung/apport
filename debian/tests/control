@@ -1,0 +1,77 @@
+Test-command: cp -r pyproject.toml tests "$AUTOPKGTEST_TMP" && cd "$AUTOPKGTEST_TMP" && python3 -m pytest -ra -v -m "not requires_internet" tests/unit/ tests/integration/
+Depends:
+ apport,
+ apport-gtk,
+ apport-kde,
+ apport-retrace,
+ apport-valgrind,
+ default-jdk-headless | java-sdk-headless,
+ dictionaries-common,
+ gcc,
+ gnu-coreutils,
+ kmod,
+ libc6-dev,
+ libglib2.0-dev,
+ libxml2-utils,
+ pkgconf,
+ polkitd,
+ python3-psutil,
+ python3-pytest,
+ python3-pytest-cov,
+ python3-systemd,
+ python3-zstandard,
+ xterm
+Restrictions: allow-stderr, needs-root
+Features: test-name=unit-and-integration-tests
+
+Test-command: cp -r pyproject.toml tests "$AUTOPKGTEST_TMP" && cd "$AUTOPKGTEST_TMP" && xvfb-run python3 -m pytest -ra -v tests/system/test_ui_gtk.py tests/system/test_ui_kde.py
+Features: test-name=system-tests-ui
+Depends:
+ apport-gtk,
+ apport-kde,
+ gdb-multiarch,
+ python3-psutil,
+ python3-pytest,
+ python3-pytest-cov,
+ xvfb
+Restrictions: allow-stderr, needs-root
+
+Tests: system-tests
+Depends:
+ apport-gtk,
+ apport-kde,
+ dbus,
+ dbus-x11,
+ gnu-coreutils,
+ gvfs-daemons,
+ psmisc,
+ python3-dbus,
+ python3-psutil,
+ python3-pytest,
+ python3-pytest-cov,
+ python3-systemd,
+ ubuntu-dbgsym-keyring,
+ xvfb
+Restrictions: allow-stderr, isolation-container, needs-root
+
+Tests: system-tests-internet
+Depends:
+ apport,
+ apport-gtk,
+ apport-kde,
+ apport-retrace,
+ apport-valgrind,
+ chaos-marmosets,
+ dirmngr,
+ gcc,
+ gdb-multiarch,
+ gnome-icon-theme,
+ gnu-coreutils,
+ psmisc,
+ python3-psutil,
+ python3-pytest,
+ python3-pytest-cov,
+ python3-systemd,
+ ubuntu-dbgsym-keyring,
+ ubuntu-keyring
+Restrictions: allow-stderr, isolation-container, needs-internet, needs-root

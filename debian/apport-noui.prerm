@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = remove ]; then
+	rm -f /var/lib/apport/autoreport
+fi
+
+# Transition the units to apport package itself
+if [ -x "/usr/bin/deb-systemd-helper" ]; then
+       deb-systemd-invoke stop 'apport-noui.path' 'apport-noui.service' >/dev/null || true
+       deb-systemd-helper purge 'apport-noui.path' >/dev/null || true
+       deb-systemd-helper unmask 'apport-noui.path' >/dev/null || true
+       deb-systemd-invoke stop 'apport-autoreport.path' >/dev/null || true
+fi
+
+#DEBHELPER#
