@@ -64,6 +64,8 @@ jobs:
         run: sudo rm -f /var/crash/*.crash
       - name: Enable Apport
         run: sudo /usr/share/apport/apport --start
+      - name: log packages
+        run: dpkg-query -W
       - name: Run system tests that require Internet access
         env:
           GDK_BACKEND: x11
