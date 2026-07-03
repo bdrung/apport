@@ -1,0 +1,66 @@
+From: Benjamin Drung <bdrung@ubuntu.com>
+Date: Thu, 9 Jun 2022 15:32:50 +0200
+Subject: Default to Ubuntu crash DB
+
+Forwarded: not-needed
+---
+ etc/apport/crashdb.conf | 36 +++++++++++++++++++++++-------------
+ 1 file changed, 23 insertions(+), 13 deletions(-)
+
+diff --git a/etc/apport/crashdb.conf b/etc/apport/crashdb.conf
+index 76ac422..db96f99 100644
+--- a/etc/apport/crashdb.conf
++++ b/etc/apport/crashdb.conf
+@@ -1,10 +1,26 @@
+ """map crash database names to CrashDatabase implementations and URLs"""
+ 
+ import datetime
++import pathlib
+ import platform
+ 
+ # pylint: disable-next=invalid-name
+-default = "debug"
++default = "ubuntu"
++
++
++def get_oem_project():
++    """Determine OEM project name from Distribution Channel Descriptor
++
++    Return None if it cannot be determined or does not exist.
++    """
++    try:
++        dcd = pathlib.Path("/var/lib/ubuntu_dist_channel").read_text(encoding="utf-8")
++        if dcd.startswith("canonical-oem-"):
++            return dcd.split("-")[2]
++    except IOError:
++        return None
++    return None
++
+ 
+ # pylint: disable-next=consider-using-namedtuple-or-dataclass
+ databases: dict[str, dict[str, str | list[str] | None]] = {
+@@ -18,18 +34,12 @@ databases: dict[str, dict[str, str | list[str] | None]] = {
+         "escalation_tag": "bugpattern-needed",
+         "escalated_tag": "bugpattern-written",
+     },
+-    "fedora": {
+-        # NOTE this will change Fall '07 when RHT switches to bugzilla 3.x!
+-        "impl": "rhbugzilla",
+-        "bug_pattern_url": "http://qa.fedoraproject.org/apport/bugpatterns.xml",
+-        "distro": "fedora",
+-    },
+-    "debian": {
+-        "impl": "debian",
+-        "distro": "debian",
+-        "smtphost": "reportbug.debian.org",
+-        "recipient": "submit@bugs.debian.org",
+-        "sender": "",
++    "canonical-oem": {
++        "impl": "launchpad",
++        "bug_pattern_url": (
++            "http://people.canonical.com/~ubuntu-archive/bugpatterns/bugpatterns.xml"
++        ),
++        "project": get_oem_project(),
+     },
+     "snap-github": {
+         "impl": "github",

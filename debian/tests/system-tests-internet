@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+# do not run in the source tree, as we want to check the system-installed
+# apport
+TESTDIR=${AUTOPKGTEST_TMP:-/tmp}
+mkdir -p "$TESTDIR"
+cp -r pyproject.toml tests "$TESTDIR"
+cd "$TESTDIR"
+
+# clean up old crash reports
+rm -rf /var/crash/*
+
+# GPG needed by test_packaging_apt_dpkg
+export GNUPGHOME="$TESTDIR/gnupg"
+mkdir -m 700 "$GNUPGHOME"
+
+python3 -m pytest -ra -v -m requires_internet tests/system/
