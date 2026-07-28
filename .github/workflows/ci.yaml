@@ -68,7 +68,6 @@ jobs:
         container:
           - debian:stable-slim
           - debian:testing-slim
-          - ubuntu:noble
           - ubuntu:questing
           - ubuntu:resolute
         architecture:
@@ -151,7 +150,6 @@ jobs:
       fail-fast: false
       matrix:
         container:
-          - ubuntu:noble
           - ubuntu:questing
           - ubuntu:resolute
     container:
@@ -183,7 +181,6 @@ jobs:
       fail-fast: false
       matrix:
         container:
-          - ubuntu:noble
           - ubuntu:questing
           - ubuntu:resolute
         architecture:
@@ -269,7 +266,6 @@ jobs:
       fail-fast: false
       matrix:
         container:
-          - ubuntu:noble
           - ubuntu:questing
           - ubuntu:resolute
         architecture:
