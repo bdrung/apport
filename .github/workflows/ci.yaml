@@ -99,7 +99,7 @@ jobs:
       - name: Run unit and integration tests
         run: >
           python3 -m pytest -v -ra --cov=$(pwd) --cov-report=xml
-          --durations=0 tests/unit/ tests/integration/
+          --durations=0 --maxskip=32 tests/unit/ tests/integration/
       - name: Upload coverage
         uses: actions/upload-artifact@v7
         with:
@@ -136,7 +136,7 @@ jobs:
           && cp -r tests pyproject.toml "$WORKDIR"
           && cd "$WORKDIR"
           && python3 -m pytest -v -ra --cov=$(pwd) --cov-report=xml
-          --durations=0 tests/unit/ tests/integration/
+          --durations=0 --maxskip=39 tests/unit/ tests/integration/
           && cd -
           && cp "$WORKDIR/coverage.xml" .
       - name: Upload coverage
@@ -211,7 +211,7 @@ jobs:
           GDK_BACKEND: x11
         run: >
           xvfb-run python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0
+          --cov-report=xml --durations=0 --maxskip=1
           -m "not requires_internet" tests/system/
       - name: Stop D-Bus daemon
         run: kill $(cat /run/dbus/pid)
@@ -254,7 +254,7 @@ jobs:
           && cp -r tests pyproject.toml "$WORKDIR"
           && cd "$WORKDIR"
           && sudo xvfb-run python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0
+          --cov-report=xml --durations=0 --maxskip=0
           -m "not requires_internet" tests/system/
           && cd -
           && cp "$WORKDIR/coverage.xml" .
@@ -299,7 +299,8 @@ jobs:
       - name: Run system tests that require Internet access
         run: >
           python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0 -m "requires_internet" tests/system/
+          --cov-report=xml --durations=0 --maxskip=2
+          -m "requires_internet" tests/system/
       - name: Upload coverage
         uses: actions/upload-artifact@v7
         with:
@@ -343,7 +344,8 @@ jobs:
           && cp -r tests pyproject.toml "$WORKDIR"
           && cd "$WORKDIR"
           && sudo xvfb-run python3 -m pytest -v -ra --cov=$(pwd)
-          --cov-report=xml --durations=0 -m "requires_internet" tests/system/
+          --cov-report=xml --durations=0 --maxskip=1
+          -m "requires_internet" tests/system/
           && cd -
           && cp "$WORKDIR/coverage.xml" .
       - name: Upload coverage
