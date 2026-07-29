@@ -162,6 +162,7 @@ class ParseSegv:
             alarmist = "unknown"
             if addr < 65536:
                 alarmist = "NULL"
+            # ruff: ignore[ISC004] not better readable
             return (
                 False,
                 f"{name} (0x{addr:08x}) not located in a known VMA region"
@@ -177,6 +178,7 @@ class ParseSegv:
                     alarmist = "non-writable "
             short = f"{perm_name[perm][1]} {alarmist}VMA {vma['name']}"
 
+            # ruff: ignore[ISC004] not better readable
             return (
                 False,
                 f"{name} (0x{addr:08x}) in non-{perm_name[perm][0]} VMA"

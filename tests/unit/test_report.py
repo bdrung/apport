@@ -214,6 +214,7 @@ ProcStatus:
 Signal: 4
 SignalName: SIGILL
 """
+# ruff: ignore[ISC004] not better readable
 _DIVIDE_BY_ZERO_ENVIRONMENT = [
     "SHELL=/bin/bash",
     "SESSION_MANAGER=local/hostname:@/tmp/.ICE-unix/6144"
